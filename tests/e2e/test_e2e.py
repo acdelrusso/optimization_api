@@ -67,3 +67,12 @@ def test_put_to_scenarios():
 
     assert r.status_code == 200
     assert r.json()[0]["scenario_name"] == scenario_name
+
+    r = client.delete(f"/scenarios/{scenario_name}")
+
+    assert r.status_code == 204
+
+    r = client.get("/scenarios")
+
+    assert r.status_code == 200
+    assert r.json() == []

@@ -3,7 +3,6 @@ import boto3
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import src.config as config
-import sqlite3
 from src.domain.sku import Sku
 
 

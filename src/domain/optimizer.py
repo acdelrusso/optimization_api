@@ -34,10 +34,7 @@ class Optimizer:
         model.q_sku_asset = pe.Var(skus, self.assets, bounds=(0, 1))
 
         def siting_constraing(model, sku, asset):
-            if (
-                self.priorities.get_priority(sku, asset) < 0
-                or self.run_rates.get_utilization(sku, asset) == 0
-            ):
+            if self.priorities.get_priority(sku, asset) < 0:
                 return model.q_sku_asset[sku, asset] == 0
             return (
                 model.q_sku_asset[sku, asset]
@@ -144,7 +141,7 @@ class OptimizerBuilder:
         Returns:
             Demand: Demand object which provides Sku objects for a given year and month.
         """
-        lrop = self._data["LROP"]
+        lrop = self._data["LROP"].fillna("")
         lrop = lrop[lrop["Demand Scenario"] == demand_scenario].drop(
             "Demand Scenario", axis=1
         )
@@ -159,6 +156,7 @@ class OptimizerBuilder:
         """
         capacities = (
             self._data["Capacities"]
+            .fillna("")
             .astype(
                 {
                     2022: float,
@@ -178,7 +176,7 @@ class OptimizerBuilder:
         return {Asset.from_record(record) for record in capacities}
 
     def _load_approvals(self) -> Approvals:
-        approvals = self._data["Approvals"]
+        approvals = self._data["Approvals"].fillna("")
         df = pd.melt(
             approvals,
             id_vars=["Asset", "Region", "Image", "Config", "Product"],
@@ -221,7 +219,9 @@ class OptimizerBuilder:
         return priorities
 
     def _load_site_priorities(self, image) -> dict:
-        site_priorities = self._data[f"{image} Priorities"][["Asset", "Asset_Priority"]]
+        site_priorities = self._data[f"{image} Priorities"][
+            ["Asset", "Asset_Priority"]
+        ].fillna("")
         site_priorities = site_priorities[site_priorities.isna() == False]
         return {
             t.Asset: t.Asset_Priority for t in site_priorities.itertuples(index=False)
@@ -230,7 +230,7 @@ class OptimizerBuilder:
     def _load_region_priorities(self, image) -> dict:
         region_priorities = self._data[f"{image} Priorities"][
             ["Asset_Region", "Region", "Region_Priority"]
-        ]
+        ].fillna("")
         region_priorities = region_priorities[region_priorities.isna() == False]
         return {
             (t.Asset_Region, t.Region): t.Region_Priority
@@ -240,7 +240,7 @@ class OptimizerBuilder:
     def _load_product_priorities(self, image) -> dict:
         product_priorities = self._data[f"{image} Priorities"][
             ["Asset_Product", "Product", "Product_Priority"]
-        ]
+        ].fillna("")
         product_priorities = product_priorities[product_priorities.isna() == False]
         return {
             (t.Asset_Product, t.Product): t.Product_Priority
@@ -251,7 +251,7 @@ class OptimizerBuilder:
         return RunRates(
             {
                 (t.Asset, t.Image, t.Config): (t.Run_Rate, t.Avg_CO_hours)
-                for t in self._data["Run Rates"].itertuples(index=False)
+                for t in self._data["Run Rates"].fillna("").itertuples(index=False)
             }
         )
 

@@ -2,6 +2,7 @@ name: api
 
 dependencies:
   - python=3.10
+  - python-multipart
   - pandas
   - pyomo
   - glpk
@@ -12,3 +13,4 @@ dependencies:
   - black
   - psycopg2
   - python-dotenv
+  

@@ -1,0 +1,14 @@
+name: api
+
+dependencies:
+  - python=3.10
+  - pandas
+  - pyomo
+  - glpk
+  - fastapi
+  - uvicorn[standard]
+  - boto3
+  - openpyxl
+  - black
+  - psycopg2
+  - python-dotenv

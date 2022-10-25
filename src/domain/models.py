@@ -1,12 +1,37 @@
-import dataclasses
 import pandas as pd
-from typing import Iterable, TYPE_CHECKING, Optional
+from typing import Iterable, Optional
+from pydantic.dataclasses import dataclass
+import dataclasses
 
-if TYPE_CHECKING:
-    from .asset import Asset
+
+@dataclass(frozen=True, eq=False)
+class Asset:
+    name: str
+    site_code: str
+    asset_key: str
+    type: str
+    image: str
+    capacities: dict
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __eq__(self, __o: object) -> bool:
+        return self.name == __o.name
+
+    @classmethod
+    def from_record(cls, capacity: dict):
+        return cls(
+            capacity.pop("Asset"),
+            capacity.pop("Site_Code"),
+            capacity.pop("Asset_Key"),
+            capacity.pop("Type"),
+            capacity.pop("Image"),
+            capacity,
+        )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclass(frozen=True, eq=True)
 class Sku:
     year: int
     image: str
@@ -18,8 +43,10 @@ class Sku:
     product_id: str
     doses: int
     batches: float
-    allocated_to: Optional["Asset"] = None
-    percent_utilization: Optional[float] = None
+    allocated_to: Optional[Asset] = dataclasses.field(default_factory=lambda: None)
+    percent_utilization: Optional[float] = dataclasses.field(
+        default_factory=lambda: None
+    )
 
     @classmethod
     def from_tuple(cls, t):
@@ -54,6 +81,9 @@ class Sku:
 
     def __gt__(self, other):
         return self.doses > other.doses
+
+
+Sku.__pydantic_model__.update_forward_refs()
 
 
 class Demand(set):

@@ -1,8 +1,9 @@
 import dataclasses
+from pydantic import BaseModel
 
 
 @dataclasses.dataclass(frozen=True, eq=False)
-class Asset:
+class Asset(BaseModel):
     name: str
     site_code: str
     asset_key: str

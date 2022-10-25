@@ -1,7 +1,6 @@
 from src.domain.relational_data import Approvals, RunRates, Priorities
 from src.domain.optimizer import OptimizerBuilder
-from src.domain.sku import Sku
-from src.domain.asset import Asset
+from src.domain.models import Sku, Asset
 import pytest
 
 approvals = Approvals(

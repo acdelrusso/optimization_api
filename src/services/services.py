@@ -1,6 +1,6 @@
 from src.domain.optimizer import OptimizerBuilder
 from src.adapters.repository import AbstractRepository
-from src.domain.sku import Sku
+from src.domain.models import Sku
 
 
 def run_scenario(demand_scenario: str, file) -> list[dict]:

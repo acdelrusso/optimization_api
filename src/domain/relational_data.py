@@ -1,6 +1,5 @@
 from collections import UserDict
-from .sku import Sku
-from .asset import Asset
+from .models import Sku, Asset
 
 
 class RunRates(UserDict):

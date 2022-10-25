@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, File, Response, status
 from ..services import services
-from . import schemas
+from ..domain import models
 import src.adapters.repository as repository
 from typing import Optional
 import sqlite3
@@ -12,7 +12,7 @@ def get_session():
     return sqlite3.connect("./src/database/data.db")
 
 
-@app.post("/scenarios", response_model=list[schemas.Sku])
+@app.post("/scenarios", response_model=list[models.Sku])
 def run_scenario(demand: str, file: Optional[bytes] = File(None)):
     return services.run_scenario(demand, file)
 
@@ -20,7 +20,7 @@ def run_scenario(demand: str, file: Optional[bytes] = File(None)):
 @app.put("/scenarios")
 def save_last_run_scenario(
     scenario_name: str,
-    data: list[schemas.Sku],
+    data: list[models.Sku],
     session: sqlite3.Connection = Depends(get_session),
 ):
     repo = repository.Sqlite3Repository(session)

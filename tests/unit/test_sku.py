@@ -1,4 +1,4 @@
-from src.domain.sku import Demand, Sku
+from src.domain.models import Demand, Sku
 import pytest
 import pandas as pd
 

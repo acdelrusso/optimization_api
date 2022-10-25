@@ -1,6 +1,4 @@
-from src.domain.sku import Sku
-from src.domain.asset import Asset
-import sqlite3
+from src.domain.models import Sku, Asset
 import pytest
 
 # Sku Fixtures

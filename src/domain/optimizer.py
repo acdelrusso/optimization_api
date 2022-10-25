@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 import dataclasses
 from .relational_data import Priorities, RunRates, Approvals
-from .sku import Demand, Sku
-from .asset import Asset
+from .models import Demand, Sku, Asset
 import pyomo.environ as pe
 from pyomo.opt import SolverFactory
 

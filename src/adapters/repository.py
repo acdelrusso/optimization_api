@@ -3,7 +3,7 @@ import boto3
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import src.config as config
-from src.domain.sku import Sku
+from src.domain.models import Sku
 
 
 class AbstractRepository(ABC):

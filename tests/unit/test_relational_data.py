@@ -1,6 +1,5 @@
 from src.domain.relational_data import RunRates, Approvals, Priorities
 from src.domain.asset import Asset
-from src.domain.sku import Sku
 import pytest
 
 

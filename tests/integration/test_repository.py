@@ -1,14 +1,13 @@
 from src.adapters.repository import Sqlite3Repository
-from src.domain.sku import Sku
-import sqlite3
 import pytest
+import sqlite3
 
 
 @pytest.fixture
 def test_db():
     session = sqlite3.connect("./src/database/test.db")
     session.execute(
-        "CREATE TABLE scenarios (scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
+        "CREATE TABLE IF NOT EXISTS scenarios (scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
     session.commit()
     try:
@@ -75,6 +74,7 @@ def test_repository_can_get_scenario_names(allocated_sku, test_db):
 
     assert {"scenario_name": "test"} in rows
     assert {"scenario_name": "test2"} in rows
+
 
 def test_repository_can_get_scenario_data(allocated_sku, test_db):
     session = test_db

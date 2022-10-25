@@ -45,7 +45,9 @@ def delete_scenario_data(
     session: sqlite3.Connection = Depends(get_session),
 ):
     repo = repository.Sqlite3Repository(session)
-    return repo.delete(scenario_name)
+    repo.delete(scenario_name)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/scenarios")

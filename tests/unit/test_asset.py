@@ -1,4 +1,4 @@
-from src.domain.asset import Asset
+from src.domain.models import Asset
 
 
 def test_asset_init(asset_values):

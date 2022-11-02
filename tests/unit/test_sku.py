@@ -77,4 +77,4 @@ def test_demand_for_year(lrop: pd.DataFrame):
 
     demand = Demand(lrop)
 
-    assert set(demand.demand_for_year(year_to_check)) == expected
+    assert set(demand.demand_for_date(year_to_check)) == expected

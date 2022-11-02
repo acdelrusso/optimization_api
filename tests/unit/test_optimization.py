@@ -1,5 +1,5 @@
 from src.domain.relational_data import Approvals, RunRates, Priorities
-from src.domain.optimizer import OptimizerBuilder
+from src.domain.optimizer import VpackOptimizerBuilder
 from src.domain.models import Sku, Asset
 import pytest
 
@@ -18,7 +18,7 @@ unmet_demand = Asset("Unmet Demand", "UNMT", "ZUNMET", "N/A", "N/A", {})
 
 
 def test_optimization(asset, sku_values, sku):
-    optimizer = OptimizerBuilder("B", None).build_optimizer()
+    optimizer = VpackOptimizerBuilder("B", None).build_optimizer()
     optimizer.demand.data = {sku}
     optimizer.priorities = priorities
     optimizer.run_rates = run_rates

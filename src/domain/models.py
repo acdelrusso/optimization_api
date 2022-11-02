@@ -1,7 +1,9 @@
 import pandas as pd
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Set
 from pydantic.dataclasses import dataclass
 import dataclasses
+import datetime as dt
+import math
 
 
 @dataclass(frozen=True, eq=False)
@@ -85,12 +87,38 @@ class Sku:
 
 Sku.__pydantic_model__.update_forward_refs()
 
+DAYS_IN_A_MONTH = 30.16
+MONTHS_IN_A_YEAR = 12
+
 
 class Demand(set):
-    def __init__(self, lrop: pd.DataFrame):
-        self.data = {Sku.from_tuple(t) for t in lrop.itertuples(index=False)}
-
-    def demand_for_year(self, year: int) -> Iterable[Sku]:
+    def __init__(
+        self, lrop: pd.DataFrame, months_to_offset: int = 0, monthize_capacity=False
+    ):
+        self.data: Set[Sku] = set()
+        if monthize_capacity:
+            for month in range(1, 13):
+                self.data.update(
+                    {
+                        Sku.from_tuple(
+                            dt.datetime(year=year, month=month, day=1)
+                            - dt.timedelta(days=(DAYS_IN_A_MONTH * months_to_offset)),
+                            *rest,
+                            math.ceil(doses / MONTHS_IN_A_YEAR)
+                        )
+                        for t in lrop.itertuples(index=False)
+                        for (year, *rest, doses) in t
+                    }
+                )
+        else:
+            self.data = {Sku.from_tuple(t) for t in lrop.itertuples(index=False)}
+        self.monthize_capacity = monthize_capacity
+        
+    def demand_for_date(self, year: int, month: Optional[int]=None) -> Iterable[Sku]:
         for sku in self.data:
-            if sku.year == year:
+            if self.monthize_capacity:
+                if sku.date.year == year and sku.date.month == month:
+                    yield sku
+            elif sku.year == year:
                 yield sku
+        

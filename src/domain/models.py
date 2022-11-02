@@ -13,7 +13,9 @@ class Asset:
     asset_key: str
     type: str
     image: str
+    launch_date: dt.datetime
     capacities: dict
+    min_capacities: dict = None
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -22,15 +24,19 @@ class Asset:
         return self.name == __o.name
 
     @classmethod
-    def from_record(cls, capacity: dict):
-        return cls(
-            capacity.pop("Asset"),
+    def from_record(cls, capacity: dict, commitments: Optional[dict]=None):
+        site = capacity.pop("Asset")
+        default = (
+            site,
             capacity.pop("Site_Code"),
             capacity.pop("Asset_Key"),
             capacity.pop("Type"),
             capacity.pop("Image"),
+            dt.datetime(year=capacity.pop("Launch_Year"), month=capacity.pop("Launch_Month"), day=1),
             capacity,
         )
+
+        return cls(*default, commitments[site]) if commitments else cls(*default)
 
 
 @dataclass(frozen=True, eq=True)

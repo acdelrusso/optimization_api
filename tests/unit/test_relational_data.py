@@ -19,6 +19,7 @@ def test_undefined_rate_returns_large_number(sku):
         "asset_key": "W40V11_1014_008",
         "type": "Internal",
         "image": "SYRINGE",
+        "launch_date": dt.datetime(2022, 1, 1),
         "capacities": {2022: 0, 2023: 5760, 2024: 5760},
     }
     asset = Asset(**asset_values)

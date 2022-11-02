@@ -23,7 +23,7 @@ client = TestClient(app)
 
 
 @pytest.mark.e2e
-def test_put_to_scenarios():
+def test_vpack_scenario():
 
     data = {
         "date": dt.datetime(year=2031, month=1, day=1),
@@ -42,6 +42,7 @@ def test_put_to_scenarios():
             "asset_key": "W40V10_1014_008",
             "type": "Internal",
             "image": "SYRINGE",
+            "launch_date": dt.datetime(year=2022, month=1, day=1),
             "capacities": {
                 "2022": 5760.0,
                 "2023": 5760.0,
@@ -80,3 +81,7 @@ def test_put_to_scenarios():
 
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_vfn_scenario():
+    pass

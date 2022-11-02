@@ -7,6 +7,7 @@ from .relational_data import Priorities, RunRates, Approvals
 from .models import Demand, Sku, Asset
 import pyomo.environ as pe
 from pyomo.opt import SolverFactory
+import datetime as dt
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 path_to_standard_input = os.path.join(my_path, "../inputs/master.xlsx")
@@ -92,7 +93,9 @@ class Optimizer:
             self.optimize_period(year)
 
     def _extract_solution_from(self, solved_model: pe.ConcreteModel, skus: set[Sku]):
-        unmet_demand = Asset("Unmet Demand", "UNMT", "ZUNMET", "N/A", "N/A", {})
+        unmet_demand = Asset(
+            "Unmet Demand", "UNMT", "ZUNMET", "N/A", "N/A", dt.datetime(2022, 1, 1), {}
+        )
 
         allocated_skus = set()
         for sku in skus:

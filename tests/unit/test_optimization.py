@@ -20,10 +20,18 @@ priorities = Priorities(
 
 run_rates = RunRates({("Haarlem-V11", "SYRINGE", "10x"): (5, 1.5)})
 
-unmet_demand = Asset("Unmet Demand", "UNMT", "ZUNMET", "N/A", "N/A", {})
+unmet_demand = Asset(
+    "Unmet Demand",
+    "UNMT",
+    "ZUNMET",
+    "N/A",
+    "N/A",
+    dt.datetime(year=2022, month=1, day=1),
+    {},
+)
 
 
-def test_optimization(asset, sku_values, sku):
+def test_vpack_optimization(asset, sku):
     optimizer = VpackOptimizerBuilder("B", None).build_optimizer()
     optimizer.demand.data = {sku}
     optimizer.priorities = priorities
@@ -84,3 +92,7 @@ def test_optimization(asset, sku_values, sku):
         assert sku.percent_utilization == pytest.approx(
             expected_output[idx].percent_utilization
         )
+
+
+def test_vfn_optimization():
+    pass

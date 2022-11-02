@@ -3,6 +3,7 @@ from src.entry_points.main import app, get_session
 import pytest
 import sqlite3
 import json
+import datetime as dt
 
 
 def override_get_session():
@@ -25,7 +26,7 @@ client = TestClient(app)
 def test_put_to_scenarios():
 
     data = {
-        "year": 2031,
+        "date": dt.datetime(year=2031, month=1, day=1),
         "image": "SYRINGE",
         "config": "1x",
         "region": "EU",
@@ -59,7 +60,10 @@ def test_put_to_scenarios():
 
     scenario_name = "TestScenario"
 
-    r = client.put(f"/scenarios?scenario_name={scenario_name}", data=json.dumps([data]))
+    r = client.put(
+        f"/scenarios?scenario_name={scenario_name}",
+        data=json.dumps([data], default=str),
+    )
 
     assert r.status_code == 201
 

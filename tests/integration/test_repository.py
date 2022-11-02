@@ -30,7 +30,7 @@ def test_repository_can_save_a_sku(allocated_sku, test_db):
     row = session.execute("SELECT * FROM scenarios").fetchall()[0]
 
     assert "test" == row["scenario_name"]
-    assert allocated_sku.year == row["year"]
+    assert allocated_sku.date.year == row["year"]
     assert allocated_sku.image == row["image"]
     assert allocated_sku.config == row["config"]
     assert allocated_sku.region == row["region"]
@@ -87,7 +87,7 @@ def test_repository_can_get_scenario_data(allocated_sku, test_db):
     row = repo.get("test")[0]
 
     assert "test" == row["scenario_name"]
-    assert allocated_sku.year == row["year"]
+    assert allocated_sku.date.year == row["year"]
     assert allocated_sku.image == row["image"]
     assert allocated_sku.config == row["config"]
     assert allocated_sku.region == row["region"]

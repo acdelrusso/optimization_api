@@ -35,7 +35,7 @@ class Asset:
 
 @dataclass(frozen=True, eq=True)
 class Sku:
-    year: int
+    date: dt.datetime
     image: str
     config: str
     region: str
@@ -63,7 +63,7 @@ class Sku:
     def to_tuple(self):
         return (
             (
-                self.year,
+                self.date.year,
                 self.image,
                 self.config,
                 self.region,
@@ -98,20 +98,20 @@ class Demand(set):
         self.data: Set[Sku] = set()
         if monthize_capacity:
             for month in range(1, 13):
-                self.data.update(
-                    {
-                        Sku.from_tuple(
+                for t in lrop.itertuples(index=False):
+                    (year, *rest, doses) = t
+                self.data.add(
+                        Sku.from_tuple((
                             dt.datetime(year=year, month=month, day=1)
                             - dt.timedelta(days=(DAYS_IN_A_MONTH * months_to_offset)),
                             *rest,
-                            math.ceil(doses / MONTHS_IN_A_YEAR)
+                            math.ceil(doses / MONTHS_IN_A_YEAR))
                         )
-                        for t in lrop.itertuples(index=False)
-                        for (year, *rest, doses) in t
-                    }
                 )
         else:
-            self.data = {Sku.from_tuple(t) for t in lrop.itertuples(index=False)}
+            for t in lrop.itertuples(index=False):
+                (year, *rest) = t
+                self.data.add(Sku.from_tuple((dt.datetime(year=year, month=1, day=1), *rest)))
         self.monthize_capacity = monthize_capacity
         
     def demand_for_date(self, year: int, month: Optional[int]=None) -> Iterable[Sku]:
@@ -119,6 +119,6 @@ class Demand(set):
             if self.monthize_capacity:
                 if sku.date.year == year and sku.date.month == month:
                     yield sku
-            elif sku.year == year:
+            elif sku.date.year == year:
                 yield sku
         

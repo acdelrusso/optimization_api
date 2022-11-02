@@ -1,6 +1,7 @@
 from src.domain.relational_data import RunRates, Approvals, Priorities
 from src.domain.models import Asset
 import pytest
+import datetime as dt
 
 
 def test_run_rates_returns_rate(sku, asset):
@@ -31,13 +32,23 @@ def test_undefined_rate_returns_large_number(sku):
 
 def test_approvals_return_true(sku, asset):
     approvals = Approvals(
-        {("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (2022, 2031)}
+        {
+            ("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (
+                dt.datetime(year=2022, month=1, day=1),
+                dt.datetime(year=2031, month=1, day=1),
+            )
+        }
     )
 
     assert approvals.get_approval(sku, asset) is True
 
     approvals = Approvals(
-        {("Haarlem-V11", "LA", "SYRINGE", "10x", "All"): (2022, 2031)}
+        {
+            ("Haarlem-V11", "LA", "SYRINGE", "10x", "All"): (
+                dt.datetime(year=2022, month=1, day=1),
+                dt.datetime(year=2031, month=1, day=1),
+            )
+        }
     )
 
     assert approvals.get_approval(sku, asset) is True
@@ -49,7 +60,12 @@ def test_approvals_return_false(sku, asset):
     assert approvals.get_approval(sku, asset) is False
 
     approvals.update(
-        {("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (2025, 2031)}
+        {
+            ("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (
+                dt.datetime(year=2025, month=1, day=1),
+                dt.datetime(year=2031, month=1, day=1),
+            )
+        }
     )
 
     assert approvals.get_approval(sku, asset) is False
@@ -66,7 +82,12 @@ def test_priorities_calculates_correctly(sku, asset):
     assert priorities.get_priority(sku, asset) == -10
 
     approvals = Approvals(
-        {("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (2020, 2031)}
+        {
+            ("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (
+                dt.datetime(year=2020, month=1, day=1),
+                dt.datetime(year=2031, month=1, day=1),
+            )
+        }
     )
 
     priorities = Priorities(

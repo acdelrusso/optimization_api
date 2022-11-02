@@ -1,6 +1,7 @@
 from src.domain.models import Demand, Sku
 import pytest
 import pandas as pd
+import datetime as dt
 
 
 def test_sku_init(sku_values: dict):
@@ -12,7 +13,18 @@ def test_sku_init(sku_values: dict):
 
 def test_sku_from_tuple(sku_values: dict):
     sku = Sku.from_tuple(
-        (2022, "SYRINGE", "10x", "LA", "Peru", "PE", "Gardasil 9", "GSL", 50000, 10.0)
+        (
+            dt.datetime(year=2022, month=1, day=1),
+            "SYRINGE",
+            "10x",
+            "LA",
+            "Peru",
+            "PE",
+            "Gardasil 9",
+            "GSL",
+            50000,
+            10.0,
+        )
     )
 
     for attr in sku_values:
@@ -23,7 +35,7 @@ def test_sku_to_tuple(sku_values):
     sku = Sku(**sku_values)
 
     assert sku.to_tuple() == (
-        2022,
+        dt.datetime(year=2022, month=1, day=1),
         "SYRINGE",
         "10x",
         "LA",
@@ -65,16 +77,23 @@ def lrop():
 def test_demand_init(lrop: pd.DataFrame):
 
     demand = Demand(lrop)
+    expected = set()
+    for t in lrop.itertuples(index=False):
+        (year, *rest) = t
+        expected.add(Sku.from_tuple((dt.datetime(year=year, month=1, day=1), *rest)))
 
-    assert demand.data == {Sku.from_tuple(t) for t in lrop.itertuples(index=False)}
+    assert demand.data == expected
 
 
 def test_demand_for_year(lrop: pd.DataFrame):
     year_to_check = 2022
-    expected = {
-        Sku.from_tuple(t) for t in lrop.itertuples(index=False) if t[0] == year_to_check
-    }
-
     demand = Demand(lrop)
+    expected = set()
+    for t in lrop.itertuples(index=False):
+        (year, *rest) = t
+        if year == year_to_check:
+            expected.add(
+                Sku.from_tuple((dt.datetime(year=year, month=1, day=1), *rest))
+            )
 
     assert set(demand.demand_for_date(year_to_check)) == expected

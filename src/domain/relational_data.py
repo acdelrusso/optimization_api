@@ -10,7 +10,8 @@ class RunRates(UserDict):
         try:
             rate, cuco = self.__getitem__((asset.name, sku.image, sku.config))
             return scale * (
-                ((sku.doses / rate) + (cuco * sku.batches)) / asset.capacities[sku.year]
+                ((sku.doses / rate) + (cuco * sku.batches))
+                / asset.capacities[sku.date.year]
             )
         except (ZeroDivisionError, KeyError):
             return 1000000
@@ -32,7 +33,7 @@ class Approvals(UserDict):
                 )
             except (KeyError, TypeError):
                 return False
-        return sku.year <= stop and sku.year >= start
+        return sku.date <= stop and sku.date >= start
 
 
 class Priorities(UserDict):

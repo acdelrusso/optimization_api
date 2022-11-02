@@ -1,5 +1,6 @@
 from src.domain.models import Sku, Asset
 import pytest
+import datetime as dt
 
 # Sku Fixtures
 
@@ -7,7 +8,7 @@ import pytest
 @pytest.fixture
 def sku_values():
     return {
-        "year": 2022,
+        "date": dt.datetime(year=2022, month=1, day=1),
         "image": "SYRINGE",
         "config": "10x",
         "region": "LA",

@@ -2,9 +2,15 @@ from src.domain.relational_data import Approvals, RunRates, Priorities
 from src.domain.optimizer import VpackOptimizerBuilder
 from src.domain.models import Sku, Asset
 import pytest
+import datetime as dt
 
 approvals = Approvals(
-    {("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (2022, 2031)}
+    {
+        ("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (
+            dt.datetime(year=2022, month=1, day=1),
+            dt.datetime(year=2031, month=1, day=1),
+        )
+    }
 )
 
 priorities = Priorities(
@@ -28,7 +34,7 @@ def test_optimization(asset, sku_values, sku):
         [
             Sku(
                 **{
-                    "year": 2022,
+                    "date": dt.datetime(year=2022, month=1, day=1),
                     "image": "SYRINGE",
                     "config": "10x",
                     "region": "LA",
@@ -44,7 +50,7 @@ def test_optimization(asset, sku_values, sku):
             ),
             Sku(
                 **{
-                    "year": 2022,
+                    "date": dt.datetime(year=2022, month=1, day=1),
                     "image": "SYRINGE",
                     "config": "10x",
                     "region": "LA",
@@ -64,7 +70,7 @@ def test_optimization(asset, sku_values, sku):
     optimizer.optimize_period(2022)
 
     for idx, sku in enumerate(sorted(list(optimizer.allocated_skus))):
-        assert sku.year == expected_output[idx].year
+        assert sku.date == expected_output[idx].date
         assert sku.image == expected_output[idx].image
         assert sku.config == expected_output[idx].config
         assert sku.region == expected_output[idx].region

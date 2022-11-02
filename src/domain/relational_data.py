@@ -2,6 +2,7 @@ from collections import UserDict
 from .models import Sku, Asset
 
 
+
 class RunRates(UserDict):
     def __init__(self, data):
         super().__init__(data)
@@ -17,40 +18,5 @@ class RunRates(UserDict):
             return 1000000
 
 
-class Approvals(UserDict):
-    def __init__(self, data):
-        super().__init__(data)
-
-    def get_approval(self, sku: Sku, asset: Asset):
-        try:
-            start, stop = self.data.get(
-                (asset.name, sku.region, sku.image, sku.config, sku.product)
-            )
-        except (KeyError, TypeError):
-            try:
-                start, stop = self.data.get(
-                    (asset.name, sku.region, sku.image, sku.config, "All")
-                )
-            except (KeyError, TypeError):
-                return False
-        return sku.date <= stop and sku.date >= start
 
 
-class Priorities(UserDict):
-    def __init__(self, data: dict, approvals: Approvals):
-        self.approvals = approvals
-        super().__init__(data)
-
-    def get_priority(self, sku: Sku, asset: Asset):
-        if self.approvals.get_approval(sku, asset):
-            return (
-                10
-                - (
-                    self.data.get(asset.name)
-                    + self.data.get((asset.name, sku.region), 5)
-                    + self.data.get((asset.name, sku.product), 5)
-                    + self.data.get((asset.name, sku.config), 5)
-                )
-                / 10
-            )
-        return -10

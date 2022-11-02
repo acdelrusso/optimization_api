@@ -1,10 +1,12 @@
-from src.domain.relational_data import Approvals, RunRates, Priorities
+from src.domain.relational_data import RunRates
+from src.domain.approvals import VpackApprovals
+from src.domain.priorities import GeneralPriorities, Priorities
 from src.domain.optimizer import VpackOptimizerBuilder
 from src.domain.models import Sku, Asset
 import pytest
 import datetime as dt
 
-approvals = Approvals(
+approvals = VpackApprovals(
     {
         ("Haarlem-V11", "LA", "SYRINGE", "10x", "Gardasil 9"): (
             dt.datetime(year=2022, month=1, day=1),
@@ -13,10 +15,11 @@ approvals = Approvals(
     }
 )
 
-priorities = Priorities(
+priority_schema = GeneralPriorities(
     {"Haarlem-V11": 1, ("Haarlem-V11", "10x"): 10, ("Haarlem-V11", "10x"): 10},
-    approvals,
 )
+
+priorities = Priorities(priority_schema, approvals)
 
 run_rates = RunRates({("Haarlem-V11", "SYRINGE", "10x"): (5, 1.5)})
 

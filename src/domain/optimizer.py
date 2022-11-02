@@ -3,7 +3,9 @@ import os
 import pandas as pd
 import numpy as np
 import dataclasses
-from .relational_data import Priorities, RunRates, Approvals
+from .approvals import VpackApprovals
+from .priorities import GeneralPriorities, Priorities
+from .relational_data import RunRates
 from .models import Demand, Sku, Asset
 import pyomo.environ as pe
 from pyomo.opt import SolverFactory
@@ -155,144 +157,6 @@ class AbstractOptimizerBuilder(ABC):
         pass
 
 
-class VFNOptimizerBuilder(AbstractOptimizerBuilder):
-    """
-    Class responsible for building the optimization script based off of user inputs.
-
-    ...
-
-    Attributes
-    ----------
-    demand_scenario: str
-        the selected demand scenario to analyze (B, U or D) in the input file LROP tab
-    prioritization_schema: str
-        the prioritization scheme for allocating skus. Currently supported: General Priorities, Variable Costs
-
-    Methods
-    -------
-    build_optimizer():
-        procedurally builds an Optimizer object which is pre-configured to run the desired optimization
-    """
-
-    def __init__(self, demand_scenario: str, prioritization_schema: str, file=None):
-        """Initializer for the Optimizer Builder
-
-        Args:
-            demand_scenario (str): the selected demand scenario to analyze (B, U or D) in the input file LROP tab
-            prioritization_schema (str): the prioritization scheme for allocating skus. Currently supported: General Priorities, Variable Costs
-            file (_type_, optional): The desired input file. Defaults to None. If no input file is provides, uses the default master.xlsx file located
-                                    in the inputs folder.
-        """
-        if file is None:
-            file = path_to_standard_input
-        self._data = pd.read_excel(file, sheet_name=None)
-        self.demand_scenario = demand_scenario
-        self.prioritization_schema = prioritization_schema
-
-    def _load_demand(self, demand_scenario: str) -> Demand:
-        """Loads and formats the demand from the LROP tab of the inputs file
-
-        Args:
-            demand_scenario (str): the selected demand scenario to analyze (B, U or D) in the input file LROP tab
-
-        Returns:
-            Demand: Demand object which provides Sku objects for a given year and month.
-        """
-        lrop = self._data["LROP"]
-        lrop = lrop[lrop["Demand Scenario"] == demand_scenario].drop(
-            "Demand Scenario", axis=1
-        )
-        self.years = sorted(lrop["Year"].unique())
-        return Demand(lrop)
-
-    def _load_assets(self) -> set[Asset]:
-        """Loads all assets
-
-        Returns:
-            set[Asset]: _description_
-        """
-        commitments = self._data["Commitments"].set_index("Site").to_dict("index")
-        capacities = (
-            self._data["Capacity"]
-            .astype(
-                {
-                    2022: float,
-                    2023: float,
-                    2024: float,
-                    2025: float,
-                    2026: float,
-                    2027: float,
-                    2028: float,
-                    2029: float,
-                    2030: float,
-                    2031: float,
-                }
-            )
-            .to_dict("records")
-        )
-        return {AssetBuilder(record, commitments).build() for record in capacities}
-
-    def _load_approvals(self):
-        return Approvals(
-            {
-                (t.Site, t.Product, t.Image, t.Reg_Region): t.Date_Approval
-                for t in self._data["Approvals"]
-                .astype({"Date_Approval": "datetime64[ns]"})
-                .itertuples(index=False)
-            }
-        )
-
-    def _load_priorities(self, priority_schema: str) -> Priorities:
-        if priority_schema == "General Priorities":
-            schema = GeneralPriorities({})
-        elif priority_schema == "Variable Costs":
-            schema = VariableCosts({})
-        else:
-            raise ValueError("Incompatable prioritization schema chosen.")
-        priorities = Priorities(schema, self._load_approvals())
-        priorities.update(self._load_site_priorities())
-        priorities.update(self._load_region_priorities())
-        priorities.update(self._load_product_priorities())
-        return priorities
-
-    def _load_site_priorities(self) -> dict:
-        site_priorities = self._data["General Priorities"][["Site", "Site_Priority"]]
-        site_priorities = site_priorities[site_priorities.isna() == False]
-        return {
-            t.Site: t.Site_Priority for t in site_priorities.itertuples(index=False)
-        }
-
-    def _load_region_priorities(self) -> dict:
-        region_priorities = self._data["General Priorities"][
-            ["Reg_Region", "Region_Priority"]
-        ]
-        region_priorities = region_priorities[region_priorities.isna() == False]
-        return {
-            t.Reg_Region: t.Region_Priority
-            for t in region_priorities.itertuples(index=False)
-        }
-
-    def _load_product_priorities(self) -> dict:
-        product_priorities = self._data["General Priorities"][
-            ["Product", "Product_Priority"]
-        ]
-        product_priorities = product_priorities[product_priorities.isna() == False]
-        return {
-            t.Product: t.Product_Priority
-            for t in product_priorities.itertuples(index=False)
-        }
-
-    def build_optimizer(self):
-        return Optimizer(
-            self._load_assets(),
-            self._load_demand(self.demand_scenario),
-            self._load_priorities(self.prioritization_schema),
-            self.years,
-            applying_take_or_pay=True,
-            optimize_by_month=True,
-        )
-
-
 class VpackOptimizerBuilder(AbstractOptimizerBuilder):
     def __init__(self, demand_scenario: str, file=None) -> None:
         if file is None:
@@ -343,7 +207,7 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
         )
         return {Asset.from_record(record) for record in capacities}
 
-    def _load_approvals(self) -> Approvals:
+    def _load_approvals(self) -> VpackApprovals:
         approvals = self._data["Approvals"].fillna("")
         df = pd.melt(
             approvals,
@@ -368,7 +232,7 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             "Year_Stop",
         ]
 
-        return Approvals(
+        return VpackApprovals(
             {
                 (t.Asset, t.Region, t.Image, t.Config, t.Product): (
                     t.Year_Start,
@@ -378,8 +242,10 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             }
         )
 
-    def _load_priorities(self) -> Priorities:
-        priorities = Priorities({}, self._load_approvals())
+    def _load_priorities(self) -> GeneralPriorities:
+        prioritization_scheme = GeneralPriorities({})
+        approvals = self._load_approvals()
+        priorities = Priorities(prioritization_scheme, approvals)
         for image in ["VIAL", "SYRINGE"]:
             priorities.update(self._load_site_priorities(image))
             priorities.update(self._load_region_priorities(image))

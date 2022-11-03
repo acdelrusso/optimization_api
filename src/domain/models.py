@@ -62,6 +62,8 @@ class Sku:
 
     def to_dict(self):
         dictionary = dataclasses.asdict(self)
+        dictionary["year"] = self.date.year
+        del dictionary["date"]
         if self.allocated_to:
             dictionary["allocated_to"] = self.allocated_to.name
         return dictionary

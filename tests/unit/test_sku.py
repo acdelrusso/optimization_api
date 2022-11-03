@@ -54,6 +54,9 @@ def test_sku_to_tuple(sku_values):
 def test_sku_to_dict(sku_values: dict):
     sku = Sku(**sku_values)
 
+    sku_values["year"] = sku_values["date"].year
+    del sku_values["date"]
+
     assert sku.to_dict() == sku_values
 
 

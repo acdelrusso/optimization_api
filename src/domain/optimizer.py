@@ -248,13 +248,18 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
                 .agg({"Year": [np.min, np.max]})
                 .reset_index()
             )
-
-            completed_approvals.columns = list(
-                completed_approvals.columns.droplevel(1)[:5]
-            ) + [
+            aggregate_columns = [
                 "Date_Start",
                 "Date_Stop",
             ]
+            completed_approvals.columns = (
+                list(completed_approvals.columns.droplevel(1)[:5]) + aggregate_columns
+            )
+
+            for col in aggregate_columns:
+                completed_approvals[col] = pd.to_datetime(
+                    completed_approvals[col], format="%Y"
+                )
 
             return VpackApprovals(
                 {
@@ -272,7 +277,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
                     t.Date_Stop,
                 )
                 for t in self._data["Approvals"]
-                .astype({"Date_Approval": "datetime64[ns]"})
+                .astype({"Date_Start": "datetime64[ns]", "Date_Stop": "datetime64[ns]"})
                 .itertuples(index=False)
             }
         )
@@ -294,6 +299,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         priorities.update(self._load_site_priorities())
         priorities.update(self._load_region_priorities())
         priorities.update(self._load_product_priorities())
+        return priorities
 
     def _load_site_priorities(self) -> dict:
         site_priorities = self._data["General Priorities"][

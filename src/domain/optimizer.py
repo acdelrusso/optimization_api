@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import dataclasses
 from .approvals import VpackApprovals
-from .priorities import GeneralPriorities, Priorities
+from .priorities import GeneralPriorities, PriorityProvider
 from .relational_data import RunRates
 from .models import Demand, Sku, Asset
 import pyomo.environ as pe
@@ -20,7 +20,7 @@ class Optimizer:
         self,
         assets: set[Asset],
         demand: Demand,
-        priorities: Priorities,
+        priorities: PriorityProvider,
         run_rates: RunRates,
         years: list[int],
         applying_take_or_pay: bool = False,
@@ -245,7 +245,7 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
     def _load_priorities(self) -> GeneralPriorities:
         prioritization_scheme = GeneralPriorities({})
         approvals = self._load_approvals()
-        priorities = Priorities(prioritization_scheme, approvals)
+        priorities = PriorityProvider(prioritization_scheme, approvals)
         for image in ["VIAL", "SYRINGE"]:
             priorities.update(self._load_site_priorities(image))
             priorities.update(self._load_region_priorities(image))

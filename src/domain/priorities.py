@@ -11,8 +11,19 @@ class PrioritizationSchema(UserDict, ABC):
         super().__init__(data)
 
     @abstractmethod
-    def get_priority(self, sku: Sku, asset: Asset):
+    def get_priority(self, sku: Sku, asset: Asset) -> float:
         pass
+
+
+class VariableCosts(PrioritizationSchema):
+    def calculate_priority(self, sku: Sku, asset: Asset):
+        try:
+            return super().__getitem__((asset.site, sku.date.year, sku.product))
+        except KeyError as ex:
+            try:
+                return super().__getitem__((asset.site, "All", sku.product))
+            except KeyError:
+                raise KeyError from ex
 
 
 class GeneralPriorities(PrioritizationSchema):
@@ -32,7 +43,7 @@ class GeneralPriorities(PrioritizationSchema):
         )
 
 
-class Priorities:
+class PriorityProvider:
     def __init__(
         self,
         prioritization_scheme: PrioritizationSchema,

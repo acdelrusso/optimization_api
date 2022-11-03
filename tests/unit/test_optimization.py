@@ -1,6 +1,6 @@
 from src.domain.relational_data import RunRates
 from src.domain.approvals import VpackApprovals
-from src.domain.priorities import GeneralPriorities, Priorities
+from src.domain.priorities import GeneralPriorities, PriorityProvider
 from src.domain.optimizer import VpackOptimizerBuilder
 from src.domain.models import Sku, Asset
 import pytest
@@ -19,7 +19,7 @@ priority_schema = GeneralPriorities(
     {"Haarlem-V11": 1, ("Haarlem-V11", "10x"): 10, ("Haarlem-V11", "10x"): 10},
 )
 
-priorities = Priorities(priority_schema, approvals)
+priorities = PriorityProvider(priority_schema, approvals)
 
 run_rates = RunRates({("Haarlem-V11", "SYRINGE", "10x"): (5, 1.5)})
 

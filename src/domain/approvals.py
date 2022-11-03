@@ -4,7 +4,7 @@ from collections import UserDict
 
 class ApprovalSchema(ABC, UserDict):
     @abstractmethod
-    def get_approval(self, sku: Sku, asset: Asset):
+    def get_approval(self, sku: Sku, asset: Asset) -> bool:
         pass
 
 

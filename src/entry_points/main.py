@@ -13,8 +13,10 @@ def get_session():
 
 
 @app.post("/scenarios", response_model=list[models.Sku])
-def run_scenario(demand: str, file: Optional[bytes] = File(None)):
-    return services.run_scenario(demand, file)
+def run_scenario(
+    demand: str, prioritization_schema: str, file: Optional[bytes] = File(None)
+):
+    return services.run_scenario(demand, prioritization_schema, file)
 
 
 @app.put("/scenarios")

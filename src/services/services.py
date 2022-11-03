@@ -3,8 +3,8 @@ from src.adapters.repository import AbstractRepository
 from src.domain.models import Sku
 
 
-def run_scenario(demand_scenario: str, file) -> list[dict]:
-    builder = OptimizerBuilder(demand_scenario, "General Priorities", file)
+def run_scenario(demand_scenario: str, prioritization_schema: str, file) -> list[dict]:
+    builder = OptimizerBuilder(demand_scenario, prioritization_schema, file)
     optimizer = OptimizerDirector(builder).build_optimizer("vpack")
 
     optimizer.optimize()

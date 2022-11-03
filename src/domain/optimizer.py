@@ -10,6 +10,7 @@ from .models import Demand, Sku, Asset
 import pyomo.environ as pe
 from pyomo.opt import SolverFactory
 import datetime as dt
+from typing import Optional
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 path_to_standard_input = os.path.join(my_path, "../inputs/master.xlsx")
@@ -32,10 +33,12 @@ class Optimizer:
         self.run_rates = run_rates
         self.years = years
         self.allocated_skus = set()
+        self.applying_take_or_pay = applying_take_or_pay
+        self.optimize_by_month = optimize_by_month
 
-    def optimize_period(self, year: int):
+    def optimize_period(self, year: int, month: Optional[int] = None):
         model = pe.ConcreteModel()
-        skus = set(self.demand.demand_for_date(year))
+        skus = set(self.demand.demand_for_date(year, month))
         model.q_sku_asset = pe.Var(skus, self.assets, bounds=(0, 1))
 
         def siting_constraing(model, sku, asset):
@@ -51,6 +54,18 @@ class Optimizer:
         model.siting_constraints = pe.Constraint(
             skus, self.assets, rule=siting_constraing
         )
+
+        if self.applying_take_or_pay:
+
+            def asset_min_capacity_constraint(model, asset: Asset):
+                return (
+                    sum(model.q_sku_asset[sku, asset] * sku.doses for sku in skus)
+                    >= asset.min_capacities[year] / 12
+                )
+
+            model.site_min_constraint = pe.Constraint(
+                self.assets, rule=asset_min_capacity_constraint
+            )
 
         def sku_constraint(model, sku):
             return sum(model.q_sku_asset[sku, asset] for asset in self.assets) <= 1
@@ -91,8 +106,13 @@ class Optimizer:
         self.allocated_skus.update(self._extract_solution_from(model, skus))
 
     def optimize(self):
-        for year in self.years:
-            self.optimize_period(year)
+        if self.optimize_by_month:
+            for year in self.years:
+                for month in range(1, 13):
+                    self.optimize(year, month)
+        else:
+            for year in self.years:
+                self.optimize_period(year)
 
     def _extract_solution_from(self, solved_model: pe.ConcreteModel, skus: set[Sku]):
         unmet_demand = Asset(
@@ -210,6 +230,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         return {Asset.from_record(record, commitments) for record in capacities}
 
     def _load_approvals(self, kind: str) -> VpackApprovals:
+        # TODO: Code Smell, need to clean this up somehow
         if kind == "vpack":
             approvals = self._data["Approvals"].fillna("")
             df = pd.melt(
@@ -317,13 +338,21 @@ class OptimizerDirector:
         self.builder = builder
 
     def build_optimizer(self, kind):
-        return Optimizer(
-            self.builder._load_assets(),
-            self.builder._load_demand(self.builder.demand_scenario),
-            self.builder._load_priorities(kind),
-            self.builder._load_run_rates(),
-            self.builder.years,
-        )
-
-    def build_vfn_optimizer(self):
-        pass
+        if kind == "vpack":
+            return Optimizer(
+                self.builder._load_assets(),
+                self.builder._load_demand(self.builder.demand_scenario),
+                self.builder._load_priorities(kind),
+                self.builder._load_run_rates(),
+                self.builder.years,
+            )
+        elif kind == "vfn":
+            return Optimizer(
+                self.builder._load_assets(),
+                self.builder._load_demand(self.builder.demand_scenario),
+                self.builder._load_priorities(kind),
+                self.builder._load_run_rates(),
+                self.builder.years,
+                applying_take_or_pay=True,
+                optimize_by_month=True,
+            )

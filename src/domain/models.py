@@ -15,7 +15,7 @@ class Asset:
     image: str
     launch_date: dt.datetime
     capacities: dict
-    min_capacities: dict = None
+    min_capacities: Optional[dict] = None
 
     def __hash__(self) -> int:
         return hash(self.name)

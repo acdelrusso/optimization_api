@@ -3,8 +3,8 @@ import os
 import pandas as pd
 import numpy as np
 import dataclasses
-from .approvals import VpackApprovals
-from .priorities import GeneralPriorities, PriorityProvider
+from .approvals import VpackApprovals, VFNApprovals
+from .priorities import GeneralPriorities, VariableCosts, PriorityProvider
 from .relational_data import RunRates
 from .models import Demand, Sku, Asset
 import pyomo.environ as pe
@@ -152,17 +152,16 @@ class AbstractOptimizerBuilder(ABC):
     def _load_run_rates():
         pass
 
-    @abstractmethod
-    def build_optimizer() -> Optimizer:
-        pass
 
-
-class VpackOptimizerBuilder(AbstractOptimizerBuilder):
-    def __init__(self, demand_scenario: str, file=None) -> None:
+class OptimizerBuilder(AbstractOptimizerBuilder):
+    def __init__(
+        self, demand_scenario: str, prioritization_schema: str, file=None
+    ) -> None:
         if file is None:
             file = path_to_standard_input
         self._data = pd.read_excel(file, sheet_name=None)
         self.demand_scenario = demand_scenario
+        self.prioritization_schema = prioritization_schema
 
     def _load_demand(self, demand_scenario: str) -> Demand:
         """Loads and formats the demand from the LROP tab of the inputs file
@@ -205,55 +204,78 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             )
             .to_dict("records")
         )
-        return {Asset.from_record(record) for record in capacities}
+        commitments = None
+        if self._data.get("Commitments", None):
+            commitments = self._data["Commitments"].set_index("Site").to_dict("index")
+        return {Asset.from_record(record, commitments) for record in capacities}
 
-    def _load_approvals(self) -> VpackApprovals:
-        approvals = self._data["Approvals"].fillna("")
-        df = pd.melt(
-            approvals,
-            id_vars=["Asset", "Region", "Image", "Config", "Product"],
-            value_vars=self.years,
-            var_name="Year",
-            value_name="Approval",
-        )
+    def _load_approvals(self, kind: str) -> VpackApprovals:
+        if kind == "vpack":
+            approvals = self._data["Approvals"].fillna("")
+            df = pd.melt(
+                approvals,
+                id_vars=["Asset", "Region", "Image", "Config", "Product"],
+                value_vars=self.years,
+                var_name="Year",
+                value_name="Approval",
+            )
 
-        completed_approvals = (
-            df[df["Approval"] != 0]
-            .drop(columns={"Approval"})
-            .groupby(["Asset", "Region", "Image", "Config", "Product"])
-            .agg({"Year": [np.min, np.max]})
-            .reset_index()
-        )
+            completed_approvals = (
+                df[df["Approval"] != 0]
+                .drop(columns={"Approval"})
+                .groupby(["Asset", "Region", "Image", "Config", "Product"])
+                .agg({"Year": [np.min, np.max]})
+                .reset_index()
+            )
 
-        completed_approvals.columns = list(
-            completed_approvals.columns.droplevel(1)[:5]
-        ) + [
-            "Year_Start",
-            "Year_Stop",
-        ]
+            completed_approvals.columns = list(
+                completed_approvals.columns.droplevel(1)[:5]
+            ) + [
+                "Date_Start",
+                "Date_Stop",
+            ]
 
-        return VpackApprovals(
+            return VpackApprovals(
+                {
+                    (t.Asset, t.Region, t.Image, t.Config, t.Product): (
+                        t.Date_Start,
+                        t.Date_Stop,
+                    )
+                    for t in completed_approvals.itertuples(index=False)
+                }
+            )
+        return VFNApprovals(
             {
-                (t.Asset, t.Region, t.Image, t.Config, t.Product): (
-                    t.Year_Start,
-                    t.Year_Stop,
+                (t.Site, t.Product, t.Image, t.Region, t.Market): (
+                    t.Date_Start,
+                    t.Date_Stop,
                 )
-                for t in completed_approvals.itertuples(index=False)
+                for t in self._data["Approvals"]
+                .astype({"Date_Approval": "datetime64[ns]"})
+                .itertuples(index=False)
             }
         )
 
-    def _load_priorities(self) -> GeneralPriorities:
-        prioritization_scheme = GeneralPriorities({})
-        approvals = self._load_approvals()
-        priorities = PriorityProvider(prioritization_scheme, approvals)
-        for image in ["VIAL", "SYRINGE"]:
-            priorities.update(self._load_site_priorities(image))
-            priorities.update(self._load_region_priorities(image))
-            priorities.update(self._load_product_priorities(image))
-        return priorities
+    def _get_prioritization_schema(self):
+        if self.prioritization_schema == "General Priorities":
+            return GeneralPriorities({})
+        elif self.prioritization_schema == "Variable Costs":
+            return VariableCosts({})
+        else:
+            raise TypeError(
+                f"Invalid Prioritization Schema Defined: {self.prioritization_schema}"
+            )
 
-    def _load_site_priorities(self, image) -> dict:
-        site_priorities = self._data[f"{image} Priorities"][
+    def _load_priorities(self, kind: str) -> GeneralPriorities:
+        prioritization_scheme = self._get_prioritization_schema()
+        approvals = self._load_approvals(kind)
+        priorities = PriorityProvider(prioritization_scheme, approvals)
+        priorities.update(self._load_site_priorities())
+        priorities.update(self._load_region_priorities())
+        priorities.update(self._load_product_priorities())
+
+    def _load_site_priorities(self) -> dict:
+        site_priorities = self._data["General Priorities"][
             ["Asset", "Asset_Priority"]
         ].fillna("")
         site_priorities = site_priorities[site_priorities.isna() == False]
@@ -261,8 +283,8 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             t.Asset: t.Asset_Priority for t in site_priorities.itertuples(index=False)
         }
 
-    def _load_region_priorities(self, image) -> dict:
-        region_priorities = self._data[f"{image} Priorities"][
+    def _load_region_priorities(self) -> dict:
+        region_priorities = self._data["General Priorities"][
             ["Asset_Region", "Region", "Region_Priority"]
         ].fillna("")
         region_priorities = region_priorities[region_priorities.isna() == False]
@@ -271,8 +293,8 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             for t in region_priorities.itertuples(index=False)
         }
 
-    def _load_product_priorities(self, image) -> dict:
-        product_priorities = self._data[f"{image} Priorities"][
+    def _load_product_priorities(self) -> dict:
+        product_priorities = self._data["General Priorities"][
             ["Asset_Product", "Product", "Product_Priority"]
         ].fillna("")
         product_priorities = product_priorities[product_priorities.isna() == False]
@@ -289,11 +311,19 @@ class VpackOptimizerBuilder(AbstractOptimizerBuilder):
             }
         )
 
-    def build_optimizer(self):
+
+class OptimizerDirector:
+    def __init__(self, builder: OptimizerBuilder) -> None:
+        self.builder = builder
+
+    def build_optimizer(self, kind):
         return Optimizer(
-            self._load_assets(),
-            self._load_demand(self.demand_scenario),
-            self._load_priorities(),
-            self._load_run_rates(),
-            self.years,
+            self.builder._load_assets(),
+            self.builder._load_demand(self.builder.demand_scenario),
+            self.builder._load_priorities(kind),
+            self.builder._load_run_rates(),
+            self.builder.years,
         )
+
+    def build_vfn_optimizer(self):
+        pass

@@ -1,10 +1,11 @@
-from src.domain.optimizer import VpackOptimizerBuilder
+from src.domain.optimizer import OptimizerBuilder, OptimizerDirector
 from src.adapters.repository import AbstractRepository
 from src.domain.models import Sku
 
 
 def run_scenario(demand_scenario: str, file) -> list[dict]:
-    optimizer = VpackOptimizerBuilder(demand_scenario, file).build_optimizer()
+    builder = OptimizerBuilder(demand_scenario, "General Priorities", file)
+    optimizer = OptimizerDirector(builder).build_optimizer("vpack")
 
     optimizer.optimize()
 

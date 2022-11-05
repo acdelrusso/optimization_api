@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from .models import Sku, Asset
 from collections import UserDict
 
+
 class ApprovalSchema(ABC, UserDict):
     @abstractmethod
     def get_approval(self, sku: Sku, asset: Asset) -> bool:
@@ -23,7 +24,12 @@ class VFNApprovals(ApprovalSchema):
                     (asset.name, sku.region, sku.image, sku.product, "All")
                 )
             except (KeyError, TypeError):
-                return False
+                try:
+                    start, stop = self.data.get(
+                        (asset.name, "All", sku.image, sku.product, "All")
+                    )
+                except (KeyError, TypeError):
+                    return False
         return sku.date <= stop and sku.date >= start
 
 

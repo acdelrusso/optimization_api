@@ -42,13 +42,9 @@ class Optimizer:
         model.q_sku_asset = pe.Var(skus, self.assets, bounds=(0, 1))
 
         def siting_constraing(model, sku, asset):
-            if self.priorities.get_priority(sku, asset) < 0:
-                return model.q_sku_asset[sku, asset] == 0
             return (
-                model.q_sku_asset[sku, asset]
-                * self.priorities.get_priority(sku, asset)
-                * self.run_rates.get_utilization(sku, asset)
-                >= 0
+                model.q_sku_asset[sku, asset] * self.priorities.get_priority(sku, asset)
+                >= -5
             )
 
         model.siting_constraints = pe.Constraint(
@@ -109,7 +105,7 @@ class Optimizer:
         if self.optimize_by_month:
             for year in self.years:
                 for month in range(1, 13):
-                    self.optimize(year, month)
+                    self.optimize_period(year, month)
         else:
             for year in self.years:
                 self.optimize_period(year)
@@ -183,7 +179,9 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         self.demand_scenario = demand_scenario
         self.prioritization_schema = prioritization_schema
 
-    def _load_demand(self, demand_scenario: str) -> Demand:
+    def _load_demand(
+        self, demand_scenario: str, monthly_offset: int = 0, monthize_capacity=False
+    ) -> Demand:
         """Loads and formats the demand from the LROP tab of the inputs file
 
         Args:
@@ -196,9 +194,8 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         lrop = lrop[lrop["Demand Scenario"] == demand_scenario].drop(
             "Demand Scenario", axis=1
         )
-        print(lrop)
         self.years = sorted(lrop["Year"].unique())
-        return Demand(lrop)
+        return Demand(lrop, monthly_offset, monthize_capacity)
 
     def _load_assets(self) -> set[Asset]:
         """Loads all assets
@@ -226,7 +223,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
             .to_dict("records")
         )
         commitments = None
-        if self._data.get("Commitments", None):
+        if self._data.get("Commitments", None) is not None:
             commitments = self._data["Commitments"].set_index("Site").to_dict("index")
         return {Asset.from_record(record, commitments) for record in capacities}
 
@@ -273,7 +270,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
             )
         return VFNApprovals(
             {
-                (t.Site, t.Product, t.Image, t.Region, t.Market): (
+                (t.Site, t.Region, t.Image, t.Product, t.Market): (
                     t.Date_Start,
                     t.Date_Stop,
                 )
@@ -356,10 +353,14 @@ class OptimizerDirector:
         elif kind == "vfn":
             return Optimizer(
                 self.builder._load_assets(),
-                self.builder._load_demand(self.builder.demand_scenario),
+                self.builder._load_demand(
+                    self.builder.demand_scenario,
+                    monthly_offset=6,
+                    monthize_capacity=True,
+                ),
                 self.builder._load_priorities(kind),
                 self.builder._load_run_rates(),
-                self.builder.years,
+                self.builder.years[:-1],
                 applying_take_or_pay=True,
                 optimize_by_month=True,
             )

@@ -107,13 +107,14 @@ class Demand(set):
         if monthize_capacity:
             for month in range(1, 13):
                 for t in lrop.itertuples(index=False):
-                    (year, *rest, doses) = t
+                    (year, *rest, doses, batches) = t
                     self.data.add(
                             Sku.from_tuple((
                                 dt.datetime(year=year, month=month, day=1)
                                 - dt.timedelta(days=(DAYS_IN_A_MONTH * months_to_offset)),
                                 *rest,
-                                math.ceil(doses / MONTHS_IN_A_YEAR))
+                                math.ceil(doses / MONTHS_IN_A_YEAR)
+                                ,batches)
                             )
                     )
         else:

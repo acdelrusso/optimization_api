@@ -196,6 +196,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         lrop = lrop[lrop["Demand Scenario"] == demand_scenario].drop(
             "Demand Scenario", axis=1
         )
+        print(lrop)
         self.years = sorted(lrop["Year"].unique())
         return Demand(lrop)
 
@@ -232,7 +233,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
     def _load_approvals(self, kind: str) -> VpackApprovals:
         # TODO: Code Smell, need to clean this up somehow
         if kind == "vpack":
-            approvals = self._data["Approvals"].fillna("")
+            approvals = self._data["Approvals"]
             df = pd.melt(
                 approvals,
                 id_vars=["Asset", "Region", "Image", "Config", "Product"],
@@ -292,7 +293,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
                 f"Invalid Prioritization Schema Defined: {self.prioritization_schema}"
             )
 
-    def _load_priorities(self, kind: str) -> GeneralPriorities:
+    def _load_priorities(self, kind: str) -> PriorityProvider:
         prioritization_scheme = self._get_prioritization_schema()
         approvals = self._load_approvals(kind)
         priorities = PriorityProvider(prioritization_scheme, approvals)

@@ -41,15 +41,15 @@ class Optimizer:
         skus = set(self.demand.demand_for_date(year, month))
         model.q_sku_asset = pe.Var(skus, self.assets, bounds=(0, 1))
 
-        def siting_constraing(model, sku, asset):
-            return (
-                model.q_sku_asset[sku, asset] * self.priorities.get_priority(sku, asset)
-                >= -5
-            )
+        # def siting_constraing(model, sku, asset):
+        #     return (
+        #         model.q_sku_asset[sku, asset] * self.priorities.get_priority(sku, asset)
+        #         >= -5
+        #     )
 
-        model.siting_constraints = pe.Constraint(
-            skus, self.assets, rule=siting_constraing
-        )
+        # model.siting_constraints = pe.Constraint(
+        #     skus, self.assets, rule=siting_constraing
+        # )
 
         if self.applying_take_or_pay:
 
@@ -341,16 +341,16 @@ class OptimizerDirector:
     def __init__(self, builder: OptimizerBuilder) -> None:
         self.builder = builder
 
-    def build_optimizer(self, kind):
-        if kind == "vpack":
+    def build_optimizer(self, strategy):
+        if strategy == "vpack":
             return Optimizer(
                 self.builder._load_assets(),
                 self.builder._load_demand(self.builder.demand_scenario),
-                self.builder._load_priorities(kind),
+                self.builder._load_priorities(strategy),
                 self.builder._load_run_rates(),
                 self.builder.years,
             )
-        elif kind == "vfn":
+        elif strategy == "vfn":
             return Optimizer(
                 self.builder._load_assets(),
                 self.builder._load_demand(
@@ -358,7 +358,7 @@ class OptimizerDirector:
                     monthly_offset=6,
                     monthize_capacity=True,
                 ),
-                self.builder._load_priorities(kind),
+                self.builder._load_priorities(strategy),
                 self.builder._load_run_rates(),
                 self.builder.years[:-1],
                 applying_take_or_pay=True,

@@ -51,10 +51,11 @@ class AWSRedshiftRepository(AbstractRepository):
         query_results = self.cur.fetchall()
         print(query_results)
 
-    def add(self, skus, scenario_name: str):
+    def add(self, skus, scenario_name: str, strategy: str):
         args_str = ",".join(
             self.cur.mogrify(
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (scenario_name, *sku)
+                "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (strategy, scenario_name, *sku),
             )
             for sku in skus
         )
@@ -84,26 +85,30 @@ class Sqlite3Repository(AbstractRepository):
         self.conn = connection
         self.conn.row_factory = dict_factory
 
-    def add(self, skus, scenario_name: str):
+    def add(self, skus, scenario_name: str, strategy: str):
         print()
         for sku in skus:
             self.conn.execute(
-                "INSERT INTO scenarios VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (scenario_name, *sku.to_tuple()),
+                "INSERT INTO scenarios VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (strategy, scenario_name, *sku.to_tuple()),
             )
 
-    def delete(self, scenario_name: str):
+    def delete(self, scenario_name: str, strategy: str):
         self.conn.execute(
-            "DELETE FROM scenarios WHERE scenario_name == ?", (scenario_name,)
+            "DELETE FROM scenarios WHERE scenario_name == ? AND src == ?",
+            (scenario_name, strategy),
         )
 
-    def get_all(self) -> list:
-        res = self.conn.execute("SELECT DISTINCT scenario_name FROM scenarios")
+    def get_all(self, strategy: str) -> list:
+        res = self.conn.execute(
+            "SELECT DISTINCT scenario_name FROM scenarios WHERE src == ?", (strategy,)
+        )
         return res.fetchall()
 
-    def get(self, scenario_name: str):
+    def get(self, scenario_name: str, strategy: str):
         res = self.conn.execute(
-            "SELECT * FROM scenarios WHERE scenario_name == ?", (scenario_name,)
+            "SELECT * FROM scenarios WHERE scenario_name == ? AND src == ?",
+            (scenario_name, strategy),
         )
         return res.fetchall()
 

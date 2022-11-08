@@ -95,13 +95,14 @@ def test_demand_init_with_monthize(lrop: pd.DataFrame):
     expected = set()
     for month in range(1, 13):
         for t in lrop.itertuples(index=False):
-            (year, *rest, doses) = t
+            (year, *rest, doses, batches) = t
             expected.add(
                 Sku.from_tuple(
                     (
                         dt.datetime(year=year, month=month, day=1),
                         *rest,
                         math.ceil(doses / MONTHS_IN_A_YEAR),
+                        batches,
                     )
                 )
             )
@@ -117,7 +118,7 @@ def test_demand_init_with_monthize_and_offset(lrop: pd.DataFrame):
     expected = set()
     for month in range(1, 13):
         for t in lrop.itertuples(index=False):
-            (year, *rest, doses) = t
+            (year, *rest, doses, batches) = t
             expected.add(
                 Sku.from_tuple(
                     (
@@ -125,6 +126,7 @@ def test_demand_init_with_monthize_and_offset(lrop: pd.DataFrame):
                         - dt.timedelta(days=(DAYS_IN_A_MONTH * OFFSET_TO_TEST)),
                         *rest,
                         math.ceil(doses / MONTHS_IN_A_YEAR),
+                        batches,
                     )
                 )
             )
@@ -154,7 +156,7 @@ def test_demand_for_year_and_month(lrop: pd.DataFrame):
     expected = set()
     for month in range(1, 13):
         for t in lrop.itertuples(index=False):
-            (year, *rest, doses) = t
+            (year, *rest, doses, batches) = t
             if year == year_to_check and month == month_to_check:
                 expected.add(
                     Sku.from_tuple(
@@ -162,6 +164,7 @@ def test_demand_for_year_and_month(lrop: pd.DataFrame):
                             dt.datetime(year=year, month=month, day=1),
                             *rest,
                             math.ceil(doses / MONTHS_IN_A_YEAR),
+                            batches,
                         )
                     )
                 )

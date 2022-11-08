@@ -9,7 +9,7 @@ import datetime as dt
 def override_get_session():
     session = sqlite3.connect("./src/database/e2e_test.db")
     session.execute(
-        "CREATE TABLE IF NOT EXISTS scenarios (scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
+        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
     try:
         yield session
@@ -23,7 +23,8 @@ client = TestClient(app)
 
 
 @pytest.mark.e2e
-def test_vpack_scenario():
+@pytest.mark.parametrize("strategy", ["vpack", "vfn"])
+def test_vpack_scenario(strategy):
 
     data = {
         "date": dt.datetime(year=2031, month=1, day=1),
@@ -62,26 +63,22 @@ def test_vpack_scenario():
     scenario_name = "TestScenario"
 
     r = client.put(
-        f"/scenarios?scenario_name={scenario_name}",
+        f"/scenarios/{strategy}?scenario_name={scenario_name}",
         data=json.dumps([data], default=str),
     )
 
     assert r.status_code == 201
 
-    r = client.get("/scenarios")
+    r = client.get(f"/scenarios/{strategy}")
 
     assert r.status_code == 200
     assert r.json()[0]["scenario_name"] == scenario_name
 
-    r = client.delete(f"/scenarios/{scenario_name}")
+    r = client.delete(f"/scenarios/{strategy}/{scenario_name}")
 
     assert r.status_code == 204
 
-    r = client.get("/scenarios")
+    r = client.get(f"/scenarios/{strategy}")
 
     assert r.status_code == 200
     assert r.json() == []
-
-
-def test_vfn_scenario():
-    pass

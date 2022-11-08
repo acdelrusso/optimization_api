@@ -16,14 +16,14 @@ class PrioritizationSchema(UserDict, ABC):
 
 
 class VariableCosts(PrioritizationSchema):
-    def calculate_priority(self, sku: Sku, asset: Asset):
+    def get_priority(self, sku: Sku, asset: Asset):
         try:
-            return super().__getitem__((asset.site, sku.date.year, sku.product))
+            return 10 - super().__getitem__((asset.name, sku.date.year, sku.product))
         except KeyError as ex:
             try:
-                return super().__getitem__((asset.site, "All", sku.product))
+                return 10 - super().__getitem__((asset.name, "All", sku.product))
             except KeyError:
-                raise KeyError from ex
+                return 5
 
 
 class GeneralPriorities(PrioritizationSchema):

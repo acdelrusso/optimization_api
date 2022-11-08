@@ -7,7 +7,7 @@ import sqlite3
 def test_db():
     session = sqlite3.connect("./src/database/test.db")
     session.execute(
-        "CREATE TABLE IF NOT EXISTS scenarios (scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
+        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
     session.commit()
     try:
@@ -18,16 +18,19 @@ def test_db():
         session.close()
 
 
-def test_repository_can_save_a_sku(allocated_sku, test_db):
+@pytest.mark.parametrize("strategy", ["vpack", "vfn"])
+def test_repository_can_save_a_sku(allocated_sku, test_db, strategy):
 
     session = test_db
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test")
+    repo.add([allocated_sku], "test", strategy)
     session.commit()
 
-    row = session.execute("SELECT * FROM scenarios").fetchall()[0]
+    row = session.execute(
+        "SELECT * FROM scenarios WHERE src == ?", (strategy,)
+    ).fetchall()[0]
 
     assert "test" == row["scenario_name"]
     assert allocated_sku.date.year == row["year"]
@@ -45,46 +48,51 @@ def test_repository_can_save_a_sku(allocated_sku, test_db):
     assert allocated_sku.percent_utilization == row["percent_utilization"]
 
 
-def test_repository_can_delete_a_sku(allocated_sku, test_db):
+@pytest.mark.parametrize("strategy", ["vpack", "vfn"])
+def test_repository_can_delete_a_sku(allocated_sku, test_db, strategy):
     session = test_db
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test")
+    repo.add([allocated_sku], "test", strategy)
     session.commit()
 
-    repo.delete("test")
+    repo.delete("test", strategy)
     session.commit()
 
-    row = session.execute("SELECT * FROM scenarios").fetchall()
+    row = session.execute(
+        "SELECT * FROM scenarios WHERE src == ?", (strategy,)
+    ).fetchall()
 
     assert row == []
 
 
-def test_repository_can_get_scenario_names(allocated_sku, test_db):
+@pytest.mark.parametrize("strategy", ["vpack", "vfn"])
+def test_repository_can_get_scenario_names(allocated_sku, test_db, strategy):
     session = test_db
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test")
-    repo.add([allocated_sku], "test2")
+    repo.add([allocated_sku], "test", strategy)
+    repo.add([allocated_sku], "test2", strategy)
     session.commit()
 
-    rows = repo.get_all()
+    rows = repo.get_all(strategy)
 
     assert {"scenario_name": "test"} in rows
     assert {"scenario_name": "test2"} in rows
 
 
-def test_repository_can_get_scenario_data(allocated_sku, test_db):
+@pytest.mark.parametrize("strategy", ["vpack", "vfn"])
+def test_repository_can_get_scenario_data(allocated_sku, test_db, strategy):
     session = test_db
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test")
+    repo.add([allocated_sku], "test", strategy)
     session.commit()
 
-    row = repo.get("test")[0]
+    row = repo.get("test", strategy)[0]
 
     assert "test" == row["scenario_name"]
     assert allocated_sku.date.year == row["year"]

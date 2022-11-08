@@ -113,8 +113,8 @@ class Demand(set):
                                 dt.datetime(year=year, month=month, day=1)
                                 - dt.timedelta(days=(DAYS_IN_A_MONTH * months_to_offset)),
                                 *rest,
-                                math.ceil(doses / MONTHS_IN_A_YEAR)
-                                ,batches)
+                                math.ceil(doses / MONTHS_IN_A_YEAR),
+                                batches)
                             )
                     )
         else:

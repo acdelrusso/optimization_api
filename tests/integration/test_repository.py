@@ -1,4 +1,5 @@
 from src.adapters.repository import Sqlite3Repository
+import src.services.services as services
 import pytest
 import sqlite3
 
@@ -25,7 +26,8 @@ def test_repository_can_save_a_sku(allocated_sku, test_db, strategy):
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test", strategy)
+    services.save_scenario(strategy, "test", [allocated_sku], repo)
+
     session.commit()
 
     row = session.execute(

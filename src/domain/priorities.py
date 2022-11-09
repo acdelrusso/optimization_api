@@ -16,14 +16,13 @@ class PrioritizationSchema(UserDict, ABC):
 
 
 class VariableCosts(PrioritizationSchema):
+    def __init__(self, data: dict):
+        super().__init__(data)
+
     def get_priority(self, sku: Sku, asset: Asset):
-        try:
-            return 10 - super().__getitem__((asset.name, sku.date.year, sku.product))
-        except KeyError as ex:
-            try:
-                return 10 - super().__getitem__((asset.name, "All", sku.product))
-            except KeyError:
-                return 5
+        if self.data.get((asset.name, sku.date.year, sku.product)) is None:
+            return 10 - self.data.get((asset.name, "All", sku.product), 9)
+        return 10 - self.data.get((asset.name, sku.date.year, sku.product))
 
 
 class GeneralPriorities(PrioritizationSchema):
@@ -49,13 +48,13 @@ class PriorityProvider:
         prioritization_scheme: PrioritizationSchema,
         approvals: ApprovalSchema,
     ) -> None:
-        self.prioritization_sceme = prioritization_scheme
+        self.prioritization_scheme = prioritization_scheme
         self.approvals = approvals
 
     def get_priority(self, sku: Sku, asset: Asset):
         if self.approvals.get_approval(sku, asset):
-            return self.prioritization_sceme.get_priority(sku, asset)
+            return self.prioritization_scheme.get_priority(sku, asset)
         return BIG_M
 
     def update(self, data: dict):
-        self.prioritization_sceme.update(data)
+        self.prioritization_scheme.update(data)

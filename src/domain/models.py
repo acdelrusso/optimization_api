@@ -24,7 +24,7 @@ class Asset:
         return self.name == __o.name
 
     @classmethod
-    def from_record(cls, capacity: dict, commitments: Optional[dict]=None):
+    def from_record(cls, capacity: dict, commitments: Optional[dict] = None):
         site = capacity.pop("Asset")
         default = (
             site,
@@ -32,7 +32,11 @@ class Asset:
             capacity.pop("Asset_Key"),
             capacity.pop("Type"),
             capacity.pop("Image"),
-            dt.datetime(year=capacity.pop("Launch_Year"), month=capacity.pop("Launch_Month"), day=1),
+            dt.datetime(
+                year=capacity.pop("Launch_Year"),
+                month=capacity.pop("Launch_Month"),
+                day=1,
+            ),
             capacity,
         )
 
@@ -109,25 +113,30 @@ class Demand(set):
                 for t in lrop.itertuples(index=False):
                     (year, *rest, doses, batches) = t
                     self.data.add(
-                            Sku.from_tuple((
+                        Sku.from_tuple(
+                            (
                                 dt.datetime(year=year, month=month, day=1)
-                                - dt.timedelta(days=(DAYS_IN_A_MONTH * months_to_offset)),
+                                - dt.timedelta(
+                                    days=(DAYS_IN_A_MONTH * months_to_offset)
+                                ),
                                 *rest,
                                 math.ceil(doses / MONTHS_IN_A_YEAR),
-                                batches)
+                                batches,
                             )
+                        )
                     )
         else:
             for t in lrop.itertuples(index=False):
                 (year, *rest) = t
-                self.data.add(Sku.from_tuple((dt.datetime(year=year, month=1, day=1), *rest)))
+                self.data.add(
+                    Sku.from_tuple((dt.datetime(year=year, month=1, day=1), *rest))
+                )
         self.monthize_capacity = monthize_capacity
-        
-    def demand_for_date(self, year: int, month: Optional[int]=None) -> Iterable[Sku]:
+
+    def demand_for_date(self, year: int, month: Optional[int] = None) -> Iterable[Sku]:
         for sku in self.data:
             if self.monthize_capacity:
                 if sku.date.year == year and sku.date.month == month:
                     yield sku
             elif sku.date.year == year:
                 yield sku
-        

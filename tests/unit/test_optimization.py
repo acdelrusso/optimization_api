@@ -35,7 +35,7 @@ unmet_demand = Asset(
 
 
 def test_vpack_optimization(asset, sku):
-    builder = OptimizerBuilder("B", "General Priorities", None)
+    builder = OptimizerBuilder("B", "General Priorities", "./src/inputs/testing.xlsx")
     optimizer = OptimizerDirector(builder).build_optimizer("vpack")
     optimizer.demand.data = {sku}
     optimizer.priorities = priorities

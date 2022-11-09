@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import dataclasses
-from .approvals import VpackApprovals, VFNApprovals
+from .approvals import VpackApprovals, VFNApprovals, ApprovalSchema
 from .priorities import GeneralPriorities, VariableCosts, PriorityProvider
 from .relational_data import RunRates
 from .models import Demand, Sku, Asset
@@ -11,9 +11,6 @@ import pyomo.environ as pe
 from pyomo.opt import SolverFactory
 import datetime as dt
 from typing import Optional
-
-my_path = os.path.abspath(os.path.dirname(__file__))
-path_to_standard_input = os.path.join(my_path, "../inputs/master.xlsx")
 
 
 class Optimizer:
@@ -39,17 +36,20 @@ class Optimizer:
     def optimize_period(self, year: int, month: Optional[int] = None):
         model = pe.ConcreteModel()
         skus = set(self.demand.demand_for_date(year, month))
-        model.q_sku_asset = pe.Var(skus, self.assets, bounds=(0, 1))
+        optimization_date = (
+            dt.datetime(year, month, 1) if month else dt.datetime(year, 1, 1)
+        )
+        assets = {
+            asset for asset in self.assets if asset.launch_date <= optimization_date
+        }
+        model.q_sku_asset = pe.Var(skus, assets, bounds=(0, 1))
 
-        # def siting_constraing(model, sku, asset):
-        #     return (
-        #         model.q_sku_asset[sku, asset] * self.priorities.get_priority(sku, asset)
-        #         >= -5
-        #     )
+        print(year, month)
 
-        # model.siting_constraints = pe.Constraint(
-        #     skus, self.assets, rule=siting_constraing
-        # )
+        def sku_constraint(model, sku):
+            return sum(model.q_sku_asset[sku, asset] for asset in assets) <= 1
+
+        model.sku_constraint = pe.Constraint(skus, rule=sku_constraint)
 
         if self.applying_take_or_pay:
 
@@ -60,13 +60,8 @@ class Optimizer:
                 )
 
             model.site_min_constraint = pe.Constraint(
-                self.assets, rule=asset_min_capacity_constraint
+                assets, rule=asset_min_capacity_constraint
             )
-
-        def sku_constraint(model, sku):
-            return sum(model.q_sku_asset[sku, asset] for asset in self.assets) <= 1
-
-        model.sku_constraint = pe.Constraint(skus, rule=sku_constraint)
 
         def site_max_capacity_constraint(model, asset: Asset):
             return (
@@ -79,7 +74,7 @@ class Optimizer:
             )
 
         model.asset_max_capacity_constraint = pe.Constraint(
-            self.assets, rule=site_max_capacity_constraint
+            assets, rule=site_max_capacity_constraint
         )
 
         def objective_function(model):
@@ -87,7 +82,7 @@ class Optimizer:
                 sum(
                     model.q_sku_asset[sku, asset]
                     * self.priorities.get_priority(sku, asset)
-                    for asset in self.assets
+                    for asset in assets
                 )
                 for sku in skus
             )
@@ -99,7 +94,7 @@ class Optimizer:
 
         self.solved_model = model
 
-        self.allocated_skus.update(self._extract_solution_from(model, skus))
+        self.allocated_skus.update(self._extract_solution_from(model, skus, assets))
 
     def optimize(self):
         if self.optimize_by_month:
@@ -110,7 +105,9 @@ class Optimizer:
             for year in self.years:
                 self.optimize_period(year)
 
-    def _extract_solution_from(self, solved_model: pe.ConcreteModel, skus: set[Sku]):
+    def _extract_solution_from(
+        self, solved_model: pe.ConcreteModel, skus: set[Sku], assets: set[Asset]
+    ):
         unmet_demand = Asset(
             "Unmet Demand", "UNMT", "ZUNMET", "N/A", "N/A", dt.datetime(2022, 1, 1), {}
         )
@@ -118,7 +115,7 @@ class Optimizer:
         allocated_skus = set()
         for sku in skus:
             unallocated = 1
-            for asset in self.assets:
+            for asset in assets:
                 if solved_model.q_sku_asset[sku, asset].value > 0.001:
                     allocated_skus.add(
                         dataclasses.replace(
@@ -170,11 +167,7 @@ class AbstractOptimizerBuilder(ABC):
 
 
 class OptimizerBuilder(AbstractOptimizerBuilder):
-    def __init__(
-        self, demand_scenario: str, prioritization_schema: str, file=None
-    ) -> None:
-        if file is None:
-            file = path_to_standard_input
+    def __init__(self, demand_scenario: str, prioritization_schema: str, file) -> None:
         self._data = pd.read_excel(file, sheet_name=None)
         self.demand_scenario = demand_scenario
         self.prioritization_schema = prioritization_schema
@@ -193,6 +186,22 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
         lrop = self._data["LROP"].fillna("")
         lrop = lrop[lrop["Demand Scenario"] == demand_scenario].drop(
             "Demand Scenario", axis=1
+        )
+        lrop = (
+            lrop.groupby(
+                [
+                    "Year",
+                    "Image",
+                    "Config",
+                    "Region",
+                    "Market",
+                    "Country_ID",
+                    "Product",
+                    "Product_ID",
+                ]
+            )
+            .sum()
+            .reset_index()
         )
         self.years = sorted(lrop["Year"].unique())
         return Demand(lrop, monthly_offset, monthize_capacity)
@@ -227,9 +236,9 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
             commitments = self._data["Commitments"].set_index("Site").to_dict("index")
         return {Asset.from_record(record, commitments) for record in capacities}
 
-    def _load_approvals(self, kind: str) -> VpackApprovals:
+    def _load_approvals(self, strategy: str) -> ApprovalSchema:
         # TODO: Code Smell, need to clean this up somehow
-        if kind == "vpack":
+        if strategy == "vpack":
             approvals = self._data["Approvals"]
             df = pd.melt(
                 approvals,
@@ -282,22 +291,30 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
 
     def _get_prioritization_schema(self):
         if self.prioritization_schema == "General Priorities":
-            return GeneralPriorities({})
+            prioritization_schema = GeneralPriorities({})
+            prioritization_schema.update(self._load_site_priorities())
+            prioritization_schema.update(self._load_region_priorities())
+            prioritization_schema.update(self._load_product_priorities())
+            return prioritization_schema
         elif self.prioritization_schema == "Variable Costs":
-            return VariableCosts({})
+            prioritization_schema = VariableCosts({})
+            prioritization_schema.update(self._load_variable_costs())
+            return prioritization_schema
         else:
             raise TypeError(
                 f"Invalid Prioritization Schema Defined: {self.prioritization_schema}"
             )
 
-    def _load_priorities(self, kind: str) -> PriorityProvider:
+    def _load_priorities(self, strategy: str) -> PriorityProvider:
         prioritization_scheme = self._get_prioritization_schema()
-        approvals = self._load_approvals(kind)
-        priorities = PriorityProvider(prioritization_scheme, approvals)
-        priorities.update(self._load_site_priorities())
-        priorities.update(self._load_region_priorities())
-        priorities.update(self._load_product_priorities())
-        return priorities
+        approvals = self._load_approvals(strategy)
+        return PriorityProvider(prioritization_scheme, approvals)
+
+    def _load_variable_costs(self):
+        costs = self._data["Variable Costs"]
+        return {
+            (t.Site, t.Year, t.Product): t.Price for t in costs.itertuples(index=False)
+        }
 
     def _load_site_priorities(self) -> dict:
         site_priorities = self._data["General Priorities"][

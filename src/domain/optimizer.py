@@ -36,7 +36,7 @@ class Optimizer:
     def optimize_period(self, year: int, month: Optional[int] = None):
         model = pe.ConcreteModel()
         skus = set(self.demand.demand_for_date(year, month))
-        SCALE = 12 if month else 1
+        SCALE = 12 if month is not None else 1
         optimization_date = (
             dt.datetime(year, month, 1) if month else dt.datetime(year, 1, 1)
         )
@@ -44,8 +44,6 @@ class Optimizer:
             asset for asset in self.assets if asset.launch_date <= optimization_date
         }
         model.q_sku_asset = pe.Var(skus, assets, bounds=(0, 1))
-
-        print(year, month)
 
         def sku_constraint(model, sku):
             return sum(model.q_sku_asset[sku, asset] for asset in assets) <= 1
@@ -65,11 +63,15 @@ class Optimizer:
             )
 
         def site_max_capacity_constraint(model, asset: Asset):
-            return sum(
-                model.q_sku_asset[sku, asset]
-                * self.run_rates.get_utilization(sku, asset)
-                for sku in skus
-            ) <= (1 / SCALE)
+            return (
+                sum(
+                    model.q_sku_asset[sku, asset]
+                    * self.run_rates.get_utilization(sku, asset)
+                    * SCALE
+                    for sku in skus
+                )
+                <= 1
+            )
 
         model.asset_max_capacity_constraint = pe.Constraint(
             assets, rule=site_max_capacity_constraint

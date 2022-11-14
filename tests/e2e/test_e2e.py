@@ -25,7 +25,6 @@ client = TestClient(app)
 @pytest.mark.e2e
 @pytest.mark.parametrize("strategy", ["vpack", "vfn"])
 def test_vpack_scenario(strategy):
-    print("Entering test")
     data = {
         "date": dt.datetime(year=2031, month=1, day=1),
         "image": "SYRINGE",

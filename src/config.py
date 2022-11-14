@@ -1,4 +1,5 @@
 from pydantic import BaseSettings  # pragma: no cover
+import boto3
 
 
 class Settings(BaseSettings):  # pragma: no cover
@@ -16,3 +17,19 @@ class Settings(BaseSettings):  # pragma: no cover
 
 
 settings = Settings()  # pragma: no cover
+
+
+def get_aws_creds():
+    session = boto3.Session(
+        aws_access_key_id=settings.access_key_id,
+        aws_secret_access_key=settings.secret_arn,
+    )
+    client = session.client("redshift")
+    try:
+        return client.get_cluster_credentials(
+            DbUser=settings.db_user,
+            ClusterIdentifier=settings.db_cluster_identifier,
+        )
+
+    except Exception as error:
+        print(f"Unable to get credentials due to {error}")

@@ -4,11 +4,28 @@ from ..domain import models
 import src.adapters.repository as repository
 from typing import Optional
 import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import src.config as config
+
 
 app = FastAPI()
 
 
+database_source = "sqlite"
+
+
 def get_session():
+    if database_source == "aws":
+        creds = config.get_aws_creds()
+        return psycopg2.connect(
+            host=config.settings.db_endpoint,
+            port=config.settings.db_port,
+            database=config.settings.db_name,
+            user=creds["DbUser"],
+            password=creds["DbPassword"],
+            cursor_factory=RealDictCursor,
+        )
     return sqlite3.connect("./src/database/data.db")
 
 
@@ -67,4 +84,6 @@ def get_all_scenarios_in_db(
 ):
     repo = repository.Sqlite3Repository(session)
     data = {"src": strategy}
-    return repo.select("scenarios", fields=["scenario_name"], criteria=data, distinct=True).fetchall()
+    return repo.select(
+        "scenarios", fields=["scenario_name"], criteria=data, distinct=True
+    ).fetchall()

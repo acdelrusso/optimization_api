@@ -85,12 +85,10 @@ def test_repository_can_get_scenario_names(allocated_sku, test_db, strategy):
     repo.add("scenarios", data)
     session.commit()
 
-    rows = repo.select("scenarios").fetchall()
+    rows = repo.select("scenarios", fields=["scenario_name"], distinct=True).fetchall()
 
-    print(rows)
-
-    assert "test" == rows[0]["scenario_name"]
-    assert "test2" == rows[1]["scenario_name"]
+    assert {"scenario_name": "test"} in rows
+    assert {"scenario_name": "test2"} in rows
 
 
 @pytest.mark.parametrize("strategy", ["vpack", "vfn"])
@@ -105,7 +103,7 @@ def test_repository_can_get_scenario_data(allocated_sku, test_db, strategy):
     session.commit()
 
     row = repo.select(
-        "scenarios", {"src": strategy, "scenario_name": "test"}
+        "scenarios", criteria={"src": strategy, "scenario_name": "test"}
     ).fetchall()[0]
 
     assert "test" == row["scenario_name"]

@@ -91,7 +91,6 @@ class Sqlite3Repository(AbstractRepository):
         with self.conn:
             cursor = self.conn.cursor()
             cursor.execute(statement, values or [])
-            print("Execute called.. Returning cursor")
             return cursor
 
     def create_table(self, table_name: str, columns: dict):
@@ -131,11 +130,18 @@ class Sqlite3Repository(AbstractRepository):
         )
 
     def select(
-        self, table_name: str, criteria: dict = None, order_by: str = None
+        self,
+        table_name: str,
+        fields: list[str] = None,
+        criteria: dict = None,
+        order_by: str = None,
+        distinct: bool = False,
     ) -> list:
         criteria = criteria or {}
 
-        query = f"SELECT * FROM {table_name}"
+        fields = ", ".join(fields) if fields else "*"
+
+        query = f"SELECT{' DISTINCT ' if distinct else ' '}{fields} FROM {table_name}"
 
         if criteria:
             placeholders = [f"{column} = ?" for column in criteria]
@@ -144,7 +150,5 @@ class Sqlite3Repository(AbstractRepository):
 
         if order_by:
             query += f" ORDER BY {order_by}"
-
-        print("Calling execute inside select")
 
         return self._execute(query, tuple(criteria.values()))

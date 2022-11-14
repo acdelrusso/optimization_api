@@ -76,6 +76,27 @@ class Sku:
             del dictionary["allocated_to"]
         return dictionary
 
+    def to_aws(self):
+        base_dict = {
+            "plant_id": self.allocated_to.site_code,
+            "mtrl_id": "",
+            "rsrc_group": self.allocated_to.asset_key,
+            "frcst_yr": self.date.year,
+            "prod_fmly_cd": self.product_id,
+            "image": self.image,
+            "config": self.config,
+            "country": self.country_id,
+            "prdctn_qty": self.doses,
+            "utilization": self.percent_utilization,
+            "Run_hrs": self.allocated_to.capacities[self.date.year]
+            * self.percent_utilization,
+            "max_cpcty": self.allocated_to.capacities[self.date.year],
+            "min_cnstrnt": 0,
+        }
+        if self.allocated_to.min_capacities:
+            base_dict["min_cnstrnt"] = self.allocated_to.min_capacities[self.date.year]
+        return base_dict
+
     def to_tuple(self):
         return (
             (

@@ -147,7 +147,7 @@ class Optimizer:
 
 
 class AbstractOptimizerBuilder(ABC):
-    def __init__(self, demand_scenario: str, file=None) -> None:
+    def __init__(self, demand_scenario: str, prioritization_schema: str, file) -> None:
         pass
 
     @abstractmethod

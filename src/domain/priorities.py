@@ -55,6 +55,3 @@ class PriorityProvider:
         if self.approvals.get_approval(sku, asset):
             return self.prioritization_scheme.get_priority(sku, asset)
         return BIG_M
-
-    def update(self, data: dict):
-        self.prioritization_scheme.update(data)

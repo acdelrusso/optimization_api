@@ -7,7 +7,7 @@ import datetime as dt
 
 
 def override_get_session():
-    session = sqlite3.connect("./src/database/e2e_test.db")
+    session = sqlite3.connect("./src/database/e2e_test.db", check_same_thread=False)
     session.execute(
         "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
@@ -25,7 +25,7 @@ client = TestClient(app)
 @pytest.mark.e2e
 @pytest.mark.parametrize("strategy", ["vpack", "vfn"])
 def test_vpack_scenario(strategy):
-
+    print("Entering test")
     data = {
         "date": dt.datetime(year=2031, month=1, day=1),
         "image": "SYRINGE",
@@ -61,7 +61,6 @@ def test_vpack_scenario(strategy):
     }
 
     scenario_name = "TestScenario"
-
     r = client.put(
         f"/scenarios/{strategy}?scenario_name={scenario_name}",
         data=json.dumps([data], default=str),

@@ -43,7 +43,8 @@ def get_scenario_data(
     session: sqlite3.Connection = Depends(get_session),
 ):
     repo = repository.Sqlite3Repository(session)
-    return repo.get(scenario_name, strategy)
+    criteria = {"src": strategy, "scenario_name": scenario_name}
+    return repo.select("scenarios", criteria)
 
 
 @app.delete("/scenarios/{strategy}/{scenario_name}")
@@ -64,5 +65,8 @@ def get_all_scenarios_in_db(
     strategy: str,
     session: sqlite3.Connection = Depends(get_session),
 ):
+    print("Repo made inside get")
     repo = repository.Sqlite3Repository(session)
-    return repo.get_all(strategy)
+    data = {"src": strategy}
+    print("Executing Select inside get")
+    return repo.select("scenarios", data).fetchall()

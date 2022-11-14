@@ -3,7 +3,6 @@ import boto3
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import src.config as config
-from src.domain.models import Sku
 
 
 class AbstractRepository(ABC):
@@ -11,10 +10,10 @@ class AbstractRepository(ABC):
     def add(self, table_name: str, data: dict):
         pass
 
-    def delete(self, scenario_name: str):
+    def delete(self, table_name: str, criteria: dict):
         pass
 
-    def get(self, scenario_name: str):
+    def select(self, table_name: str, criteria: dict = None, order_by: str = None):
         pass
 
 
@@ -69,7 +68,7 @@ class AWSRedshiftRepository(AbstractRepository):
         )
         self.conn.commit()
 
-    def get(self):
+    def select(self):
         self.cur.execute("SELECT DISCTINCT scenario_name FROM table")
         return self.cur.fetchall()
 
@@ -88,10 +87,11 @@ class Sqlite3Repository(AbstractRepository):
     def __del__(self):
         self.conn.close()
 
-    def _execute(self, statement, values=None):
+    def _execute(self, statement: str, values=None):
         with self.conn:
             cursor = self.conn.cursor()
             cursor.execute(statement, values or [])
+            print("Execute called.. Returning cursor")
             return cursor
 
     def create_table(self, table_name: str, columns: dict):
@@ -130,20 +130,21 @@ class Sqlite3Repository(AbstractRepository):
             tuple(criteria.values()),
         )
 
-    def get_all(self, strategy: str) -> list:
-        res = self.conn.execute(
-            "SELECT DISTINCT scenario_name FROM scenarios WHERE src == ?", (strategy,)
-        )
-        return res.fetchall()
+    def select(
+        self, table_name: str, criteria: dict = None, order_by: str = None
+    ) -> list:
+        criteria = criteria or {}
 
-    def get(self, scenario_name: str, strategy: str):
-        res = self.conn.execute(
-            "SELECT * FROM scenarios WHERE scenario_name == ? AND src == ?",
-            (scenario_name, strategy),
-        )
-        return res.fetchall()
+        query = f"SELECT * FROM {table_name}"
 
-    def test_connection(self):
-        res = self.conn.execute("""SELECT now()""")
-        query_results = res.fetchall()
-        print(query_results)
+        if criteria:
+            placeholders = [f"{column} = ?" for column in criteria]
+            select_criteria = " AND ".join(placeholders)
+            query += f" WHERE {select_criteria}"
+
+        if order_by:
+            query += f" ORDER BY {order_by}"
+
+        print("Calling execute inside select")
+
+        return self._execute(query, tuple(criteria.values()))

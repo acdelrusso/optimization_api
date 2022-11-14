@@ -14,8 +14,12 @@ def run_scenario(
     return list(optimizer.allocated_skus)
 
 
-def save_scenario(strategy: str, scenario_name: str, skus: list[Sku], repo: AbstractRepository):
-    try:
-        repo.add(skus, scenario_name, strategy)
-    except Exception as error:
-        print(f"Error saving scenario to database: {error}")
+def save_scenario(
+    strategy: str, scenario_name: str, skus: list[Sku], repo: AbstractRepository
+):
+    for sku in skus:
+        data = {"src": strategy, "scenario_name": scenario_name, **sku.to_dict()}
+        try:
+            repo.add("scenarios", data)
+        except Exception as error:
+            print(f"Error saving scenario to database: {error}")

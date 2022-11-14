@@ -68,8 +68,12 @@ class Sku:
         dictionary = dataclasses.asdict(self)
         dictionary["year"] = self.date.year
         del dictionary["date"]
+        del dictionary["batches"]
         if self.allocated_to:
-            dictionary["allocated_to"] = self.allocated_to.name
+            dictionary["site"] = self.allocated_to.name
+            dictionary["site_code"] = self.allocated_to.site_code
+            dictionary["asset_key"] = self.allocated_to.asset_key
+            del dictionary["allocated_to"]
         return dictionary
 
     def to_tuple(self):

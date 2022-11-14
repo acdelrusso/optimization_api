@@ -6,7 +6,7 @@ import sqlite3
 
 @pytest.fixture
 def test_db():
-    session = sqlite3.connect("./src/database/test.db")
+    session = sqlite3.connect(":memory:")
     session.execute(
         "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
@@ -14,8 +14,6 @@ def test_db():
     try:
         yield session
     finally:
-        session.execute("DROP TABLE scenarios")
-        session.commit()
         session.close()
 
 
@@ -56,7 +54,9 @@ def test_repository_can_delete_a_sku(allocated_sku, test_db, strategy):
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test", strategy)
+    data = {"src": strategy, "scenario_name": "test", **allocated_sku.to_dict()}
+
+    repo.add("scenarios", data)
     session.commit()
 
     repo.delete("test", strategy)
@@ -75,8 +75,11 @@ def test_repository_can_get_scenario_names(allocated_sku, test_db, strategy):
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test", strategy)
-    repo.add([allocated_sku], "test2", strategy)
+    data = {"src": strategy, "scenario_name": "test", **allocated_sku.to_dict()}
+
+    repo.add("scenarios", data)
+    data = {"src": strategy, "scenario_name": "test2", **allocated_sku.to_dict()}
+    repo.add("scenarios", data)
     session.commit()
 
     rows = repo.get_all(strategy)
@@ -91,7 +94,9 @@ def test_repository_can_get_scenario_data(allocated_sku, test_db, strategy):
 
     repo = Sqlite3Repository(test_db)
 
-    repo.add([allocated_sku], "test", strategy)
+    data = {"src": strategy, "scenario_name": "test", **allocated_sku.to_dict()}
+
+    repo.add("scenarios", data)
     session.commit()
 
     row = repo.get("test", strategy)[0]

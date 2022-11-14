@@ -34,6 +34,7 @@ class Optimizer:
         self.optimize_by_month = optimize_by_month
 
     def optimize_period(self, year: int, month: Optional[int] = None):
+        print(year, month)
         model = pe.ConcreteModel()
         skus = set(self.demand.demand_for_date(year, month))
         SCALE = 12 if month is not None else 1

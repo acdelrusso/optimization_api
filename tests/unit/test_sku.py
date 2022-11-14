@@ -56,6 +56,7 @@ def test_sku_to_dict(sku_values: dict):
 
     sku_values["year"] = sku_values["date"].year
     del sku_values["date"]
+    del sku_values["batches"]
 
     assert sku.to_dict() == sku_values
 

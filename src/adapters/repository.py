@@ -8,7 +8,7 @@ from src.domain.models import Sku
 
 class AbstractRepository(ABC):
     @abstractmethod
-    def add(self, skus: list[Sku], scenario_name: str):
+    def add(self, table_name: str, data: dict):
         pass
 
     def delete(self, scenario_name: str):
@@ -85,13 +85,39 @@ class Sqlite3Repository(AbstractRepository):
         self.conn = connection
         self.conn.row_factory = dict_factory
 
-    def add(self, skus, scenario_name: str, strategy: str):
-        print()
-        for sku in skus:
-            self.conn.execute(
-                "INSERT INTO scenarios VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (strategy, scenario_name, *sku.to_tuple()),
-            )
+    def __del__(self):
+        self.conn.close()
+
+    def _execute(self, statement, values=None):
+        with self.conn:
+            cursor = self.conn.cursor()
+            cursor.execute(statement, values or [])
+            return cursor
+
+    def create_table(self, table_name: str, columns: dict):
+        columns_with_types = [
+            f"{column_name} {data_type}" for column_name, data_type in columns.items()
+        ]
+        self._execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {table_name}
+            ({', '.join(columns_with_types)});
+            """
+        )
+
+    def add(self, table_name, data):
+        placeholders = ", ".join("?" * len(data))
+        column_names = ", ".join(data.keys())
+        column_values = tuple(data.values())
+
+        self._execute(
+            f"""
+            INSERT INTO {table_name}
+            ({column_names})
+            VALUES ({placeholders});
+            """,
+            column_values,
+        )
 
     def delete(self, scenario_name: str, strategy: str):
         self.conn.execute(

@@ -59,7 +59,9 @@ def test_repository_can_delete_a_sku(allocated_sku, test_db, strategy):
     repo.add("scenarios", data)
     session.commit()
 
-    repo.delete("test", strategy)
+    data = {"src": strategy, "scenario_name": "test"}
+
+    repo.delete("scenarios", data)
     session.commit()
 
     row = session.execute(

@@ -119,10 +119,15 @@ class Sqlite3Repository(AbstractRepository):
             column_values,
         )
 
-    def delete(self, scenario_name: str, strategy: str):
-        self.conn.execute(
-            "DELETE FROM scenarios WHERE scenario_name == ? AND src == ?",
-            (scenario_name, strategy),
+    def delete(self, table_name: str, criteria: dict):
+        placeholders = [f"{column} = ?" for column in criteria]
+        delete_criteria = " AND ".join(placeholders)
+        self._execute(
+            f"""
+            DELETE FROM {table_name}
+            WHERE {delete_criteria};
+            """,
+            tuple(criteria.values()),
         )
 
     def get_all(self, strategy: str) -> list:

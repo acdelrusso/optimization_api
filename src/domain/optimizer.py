@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import os
 import pandas as pd
 import numpy as np
 import dataclasses
@@ -95,16 +94,7 @@ class Optimizer:
 
         self.solved_model = model
 
-        self.allocated_skus.update(self._extract_solution_from(model, skus, assets))
-
-    def optimize(self):
-        if self.optimize_by_month:
-            for year in self.years:
-                for month in range(1, 13):
-                    self.optimize_period(year, month)
-        else:
-            for year in self.years:
-                self.optimize_period(year)
+        return self._extract_solution_from(model, skus, assets)
 
     def _extract_solution_from(
         self, solved_model: pe.ConcreteModel, skus: set[Sku], assets: set[Asset]
@@ -205,6 +195,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
             .reset_index()
         )
         self.years = sorted(lrop["Year"].unique())
+        lrop = lrop.to_dict()
         return Demand(lrop, monthly_offset, monthize_capacity)
 
     def _load_assets(self) -> set[Asset]:

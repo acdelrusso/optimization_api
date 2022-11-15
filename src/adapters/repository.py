@@ -1,8 +1,4 @@
 from abc import ABC, abstractmethod
-import boto3
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import src.config as config
 
 
 class AbstractRepository(ABC):
@@ -17,7 +13,7 @@ class AbstractRepository(ABC):
         pass
 
 
-class AwsRepository(AbstractRepository):
+class PostgresRepository(AbstractRepository):
     def __init__(self, connection) -> None:
         self.conn = connection
 

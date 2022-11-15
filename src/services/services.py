@@ -3,15 +3,12 @@ from src.adapters.repository import AbstractRepository
 from src.domain.models import Sku
 
 
-def run_scenario(
+def build_optimizer(
     demand_scenario: str, prioritization_schema: str, file, strategy: str
 ) -> list[dict]:
     builder = OptimizerBuilder(demand_scenario, prioritization_schema, file)
-    optimizer = OptimizerDirector(builder).build_optimizer(strategy)
 
-    optimizer.optimize()
-
-    return list(optimizer.allocated_skus)
+    return OptimizerDirector(builder).build_optimizer(strategy)
 
 
 def save_scenario(

@@ -7,7 +7,9 @@ import sqlite3
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import src.config as config
-
+import uvicorn
+import multiprocessing
+import itertools
 
 app = FastAPI()
 
@@ -36,7 +38,21 @@ def run_scenario(
     prioritization_schema: str,
     file: Optional[bytes] = File(None),
 ):
-    return services.run_scenario(demand, prioritization_schema, file, strategy)
+    optimizer = services.build_optimizer(demand, prioritization_schema, file, strategy)
+
+    with multiprocessing.Pool() as pool:
+        if strategy == "vpack":
+            results = pool.map(optimizer.optimize_period, optimizer.years)
+        elif strategy == "vfn":
+            results = pool.starmap(
+                optimizer.optimize_period,
+                itertools.product(optimizer.years, range(1, 13)),
+            )
+
+    for result in results:
+        optimizer.allocated_skus.update(result)
+
+    return list(optimizer.allocated_skus)
 
 
 @app.put("/scenarios/{strategy}")
@@ -87,3 +103,7 @@ def get_all_scenarios_in_db(
     return repo.select(
         "scenarios", fields=["scenario_name"], criteria=data, distinct=True
     ).fetchall()
+
+
+if __name__ == "__main__":
+    uvicorn.run("src.entry_points.main:app", host="0.0.0.0", port=8501)

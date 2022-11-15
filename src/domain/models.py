@@ -132,6 +132,7 @@ class Demand(set):
     def __init__(
         self, lrop: pd.DataFrame, months_to_offset: int = 0, monthize_capacity=False
     ):
+        lrop = pd.DataFrame(lrop)
         self.data: Set[Sku] = set()
         if monthize_capacity:
             for month in range(1, 13):

@@ -106,4 +106,7 @@ def get_all_scenarios_in_db(
 
 
 if __name__ == "__main__":
-    uvicorn.run("src.entry_points.main:app", host="0.0.0.0", port=8501)
+    # Prod
+    uvicorn.run("src.entry_points.main:app", host="0.0.0.0", port=8501, workers=2)
+    # Dev
+    # uvicorn.run("src.entry_points.main:app", port=8501, reload=True)

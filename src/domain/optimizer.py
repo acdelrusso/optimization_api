@@ -10,6 +10,7 @@ import pyomo.environ as pe
 from pyomo.opt import SolverFactory
 import datetime as dt
 from typing import Optional
+from fastapi import HTTPException, status
 
 
 class Optimizer:
@@ -45,6 +46,14 @@ class Optimizer:
         }
         model.q_sku_asset = pe.Var(skus, assets, bounds=(0, 1))
 
+        def siting_constraint(model, sku, asset):
+            return (
+                model.q_sku_asset[sku, asset] * self.priorities.get_priority(sku, asset)
+                >= 0
+            )
+
+        model.siting_constraint = pe.Constraint(skus, assets, rule=siting_constraint)
+
         def sku_constraint(model, sku):
             return sum(model.q_sku_asset[sku, asset] for asset in assets) <= 1
 
@@ -53,9 +62,11 @@ class Optimizer:
         if self.applying_take_or_pay:
 
             def asset_min_capacity_constraint(model, asset: Asset):
+                if asset.min_capacities[year] == 0:
+                    return pe.Constraint.Skip
                 return (
                     sum(model.q_sku_asset[sku, asset] * sku.doses for sku in skus)
-                    >= asset.min_capacities[year] / SCALE
+                    >= asset.min_capacities[year]
                 )
 
             model.site_min_constraint = pe.Constraint(
@@ -67,7 +78,6 @@ class Optimizer:
                 sum(
                     model.q_sku_asset[sku, asset]
                     * self.run_rates.get_utilization(sku, asset)
-                    * SCALE
                     for sku in skus
                 )
                 <= 1
@@ -107,6 +117,22 @@ class Optimizer:
         for sku in skus:
             unallocated = 1
             for asset in assets:
+                if solved_model.q_sku_asset[sku, asset].value is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Model did not Converge for {sku.date.year, sku.date.month}. Check your input file and take or pays.",
+                    )
+                if (
+                    sku.product == "Gardasil 9"
+                    and asset.name == "Coral"
+                    and solved_model.q_sku_asset[sku, asset].value > 0
+                ):
+                    print(
+                        asset.name,
+                        sku.product,
+                        self.priorities.get_priority(sku, asset),
+                        solved_model.q_sku_asset[sku, asset].value,
+                    )
                 if solved_model.q_sku_asset[sku, asset].value > 0.001:
                     allocated_skus.add(
                         dataclasses.replace(
@@ -182,6 +208,7 @@ class OptimizerBuilder(AbstractOptimizerBuilder):
             lrop.groupby(
                 [
                     "Year",
+                    "Material_Number",
                     "Image",
                     "Config",
                     "Region",
@@ -371,5 +398,5 @@ class OptimizerDirector:
                 self.builder._load_run_rates(),
                 self.builder.years[:-1],
                 applying_take_or_pay=True,
-                optimize_by_month=True,
+                optimize_by_month=False,
             )

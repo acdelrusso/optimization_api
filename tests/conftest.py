@@ -9,6 +9,7 @@ import datetime as dt
 def sku_values():
     return {
         "date": dt.datetime(year=2022, month=1, day=1),
+        "material_number": "12345678",
         "image": "SYRINGE",
         "config": "10x",
         "region": "LA",

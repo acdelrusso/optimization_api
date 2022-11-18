@@ -41,13 +41,13 @@ def run_scenario(
     optimizer = services.build_optimizer(demand, prioritization_schema, file, strategy)
 
     with multiprocessing.Pool() as pool:
-        if strategy == "vpack":
-            results = pool.map(optimizer.optimize_period, optimizer.years)
-        elif strategy == "vfn":
-            results = pool.starmap(
-                optimizer.optimize_period,
-                itertools.product(optimizer.years, range(1, 13)),
-            )
+        # if strategy == "vpack":
+        results = pool.map(optimizer.optimize_period, optimizer.years)
+        # elif strategy == "vfn":
+        #     results = pool.starmap(
+        #         optimizer.optimize_period,
+        #         itertools.product(optimizer.years, range(1, 13)),
+        #     )
 
     for result in results:
         optimizer.allocated_skus.update(result)
@@ -64,6 +64,29 @@ def save_last_run_scenario(
 ):
     repo = repository.Sqlite3Repository(session)
     services.save_scenario(strategy, scenario_name, data, repo)
+    session.commit()
+
+    return Response(status_code=status.HTTP_201_CREATED)
+
+
+@app.put("/scenarios/aws/{strategy}")
+def save_last_run_scenario_to_aws(
+    strategy: str, scenario_name: str, data: list[models.Sku]
+):
+    creds = config.get_aws_creds()
+    session = psycopg2.connect(
+        host=config.settings.db_endpoint,
+        port=config.settings.db_port,
+        database=config.settings.db_name,
+        user=creds["DbUser"],
+        password=creds["DbPassword"],
+        cursor_factory=RealDictCursor,
+    )
+    repo = repository.PostgresRepository(session)
+    print(scenario_name)
+    print(type(strategy))
+    print(type(scenario_name))
+    services.send_to_aws(strategy, scenario_name, data, repo)
     session.commit()
 
     return Response(status_code=status.HTTP_201_CREATED)
@@ -107,6 +130,6 @@ def get_all_scenarios_in_db(
 
 if __name__ == "__main__":
     # Prod
-    uvicorn.run("src.entry_points.main:app", host="0.0.0.0", port=8501, workers=2)
+    # uvicorn.run("src.entry_points.main:app", host="0.0.0.0", port=8501, workers=2)
     # Dev
-    # uvicorn.run("src.entry_points.main:app", port=8501, reload=True)
+    uvicorn.run("src.entry_points.main:app", port=8501, reload=True)

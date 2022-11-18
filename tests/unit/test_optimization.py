@@ -47,6 +47,7 @@ def test_vpack_optimization(asset, sku):
             Sku(
                 **{
                     "date": dt.datetime(year=2022, month=1, day=1),
+                    "material_number": "1234567",
                     "image": "SYRINGE",
                     "config": "10x",
                     "region": "LA",
@@ -63,6 +64,7 @@ def test_vpack_optimization(asset, sku):
             Sku(
                 **{
                     "date": dt.datetime(year=2022, month=1, day=1),
+                    "material_number": "1234567",
                     "image": "SYRINGE",
                     "config": "10x",
                     "region": "LA",
@@ -83,6 +85,7 @@ def test_vpack_optimization(asset, sku):
 
     for idx, sku in enumerate(sorted(list(optimizer.allocated_skus))):
         assert sku.date == expected_output[idx].date
+        assert sku.material_number == expected_output[idx].material_number
         assert sku.image == expected_output[idx].image
         assert sku.config == expected_output[idx].config
         assert sku.region == expected_output[idx].region

@@ -37,6 +37,31 @@ class PostgresRepository(AbstractRepository):
             """
         )
 
+    def add_many(self, table_name, src, scenario_name, skus: list[dict]):
+
+        placeholders = "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
+        column_names = ", ".join(skus[0].keys()) + ", src, scnr_desc"
+        
+        print(skus[0])
+
+        with self.conn.cursor() as cur:
+            print("inside cursor")
+            args_str = ",".join(
+                cur.mogrify(
+                    f"({placeholders})",
+                    ((*sku.values(), str(src), str(scenario_name))),
+                ).decode("utf-8")
+                for sku in skus
+            )
+
+        self._execute(
+            f"""
+            INSERT INTO {table_name}
+            ({column_names})
+            VALUES {args_str}
+            """
+        )
+
     def add(self, table_name, data):
         placeholders = ", ".join("%s" * len(data))
         column_names = ", ".join(data.keys())

@@ -16,6 +16,7 @@ def test_sku_from_tuple(sku_values: dict):
     sku = Sku.from_tuple(
         (
             dt.datetime(year=2022, month=1, day=1),
+            "12345678",
             "SYRINGE",
             "10x",
             "LA",
@@ -37,6 +38,7 @@ def test_sku_to_tuple(sku_values):
 
     assert sku.to_tuple() == (
         dt.datetime(year=2022, month=1, day=1),
+        "12345678",
         "SYRINGE",
         "10x",
         "LA",
@@ -66,6 +68,7 @@ def lrop():
     return pd.DataFrame.from_dict(
         {
             "Year": [2022, 2022, 2023],
+            "Material_Number": ["1111111", "2222222", "3333333"],
             "Image": ["SYRINGE", "SYRINGE", "SYRINGE"],
             "Config": ["1x", "10x", "1x"],
             "Region": ["LA", "US", "EEMEA"],

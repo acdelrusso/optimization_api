@@ -46,6 +46,7 @@ class Asset:
 @dataclass(frozen=True, eq=True)
 class Sku:
     date: dt.datetime
+    material_number: str
     image: str
     config: str
     region: str
@@ -79,18 +80,18 @@ class Sku:
     def to_aws(self):
         base_dict = {
             "plant_id": self.allocated_to.site_code,
-            "mtrl_id": "",
+            "mtrl_id": self.material_number,
             "rsrc_group": self.allocated_to.asset_key,
             "frcst_yr": self.date.year,
             "prod_fmly_cd": self.product_id,
             "image": self.image,
             "config": self.config,
-            "country": self.country_id,
+            "cntry": self.country_id,
             "prdctn_qty": self.doses,
-            "utilization": self.percent_utilization,
-            "Run_hrs": self.allocated_to.capacities[self.date.year]
+            "util": self.percent_utilization,
+            "Run_hrs": self.allocated_to.capacities.get(str(self.date.year), 0)
             * self.percent_utilization,
-            "max_cpcty": self.allocated_to.capacities[self.date.year],
+            "max_cap": self.allocated_to.capacities.get(str(self.date.year), 0),
             "min_cnstrnt": 0,
         }
         if self.allocated_to.min_capacities:

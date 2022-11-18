@@ -8,7 +8,7 @@ import sqlite3
 def test_db():
     session = sqlite3.connect(":memory:")
     session.execute(
-        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
+        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, material_number, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
     session.commit()
     try:

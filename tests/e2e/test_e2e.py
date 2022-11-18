@@ -9,7 +9,7 @@ import datetime as dt
 def override_get_session():
     session = sqlite3.connect("./src/database/e2e_test.db", check_same_thread=False)
     session.execute(
-        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
+        "CREATE TABLE IF NOT EXISTS scenarios (src, scenario_name, year, material_number, image, config, region, market, country_id, product, product_id, doses, site, site_code, asset_key, percent_utilization)"
     )
     try:
         yield session
@@ -27,6 +27,7 @@ client = TestClient(app)
 def test_vpack_scenario(strategy):
     data = {
         "date": dt.datetime(year=2031, month=1, day=1),
+        "material_number": "1234567",
         "image": "SYRINGE",
         "config": "1x",
         "region": "EU",

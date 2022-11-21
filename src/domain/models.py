@@ -130,9 +130,7 @@ MONTHS_IN_A_YEAR = 12
 
 
 class Demand(set):
-    def __init__(
-        self, lrop: pd.DataFrame, months_to_offset: int = 0, monthize_capacity=False
-    ):
+    def __init__(self, lrop: dict, months_to_offset: int = 0, monthize_capacity=False):
         lrop = pd.DataFrame(lrop)
         self.data: Set[Sku] = set()
         if monthize_capacity:

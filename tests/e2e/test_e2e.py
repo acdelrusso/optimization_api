@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from src.entry_points.main import app, get_session
+from src.entry_points.main import app, get_sqlite_session
 import pytest
 import sqlite3
 import json
@@ -17,7 +17,7 @@ def override_get_session():
         session.close()
 
 
-app.dependency_overrides[get_session] = override_get_session
+app.dependency_overrides[get_sqlite_session] = override_get_session
 
 client = TestClient(app)
 

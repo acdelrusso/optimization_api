@@ -1,34 +1,41 @@
 import os
 import datetime as dt
+import pandas as pd
 import pytest
-from src.domain.optimizer import OptimizerBuilder
+from src.domain.data_loaders import (
+    LROPloader,
+    AssetLoader,
+    ApprovalsLoader,
+    PrioritiesLoader,
+    RunRatesLoader,
+)
 from src.domain.models import Sku
-from src.domain.priorities import GeneralPriorities
+from src.domain.priorities import GeneralPriorities, VariableCosts
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 path_to_standard_input = os.path.join(my_path, "../../src/inputs/testing.xlsx")
 
-test_object = OptimizerBuilder("B", "General Priorities", path_to_standard_input)
+data = pd.read_excel(path_to_standard_input, sheet_name=None)
 
 
 def test_lrop_loads():
-    demand = test_object._load_demand("B")
+    lrop, years = LROPloader().load("B", data)
 
-    for sku in demand.data:
-        assert sku.date == dt.datetime(year=2030, month=1, day=1)
-        assert sku.image == "SYRINGE"
-        assert sku.config == "10x"
-        assert sku.region == "EEMEA"
-        assert sku.market == "Not Specified"
-        assert sku.country_id == "#"
-        assert sku.product == "MK1654 RSV MaB"
-        assert sku.product_id == "RSM"
-        assert sku.doses == 18200
-        assert sku.batches == 1.4
+    assert lrop["Year"][0] == 2030
+    assert lrop["Material_Number"][0] == 1234567
+    assert lrop["Image"][0] == "SYRINGE"
+    assert lrop["Config"][0] == "10x"
+    assert lrop["Region"][0] == "EEMEA"
+    assert lrop["Market"][0] == "Not Specified"
+    assert lrop["Country_ID"][0] == "#"
+    assert lrop["Product"][0] == "MK1654 RSV MaB"
+    assert lrop["Product_ID"][0] == "RSM"
+    assert lrop["Total"][0] == 18200
+    assert lrop["Batches"][0] == 1.4
 
 
 def test_assets_load():
-    assets = test_object._load_assets()
+    assets = AssetLoader().load(data)
 
     for asset in assets:
         assert asset.name == "Haarlem-V11"
@@ -52,8 +59,7 @@ def test_assets_load():
 
 
 def test_vpack_approvals_load(sku_values, asset):
-    test_object.years = list(range(2022, 2032))
-    approvals = test_object._load_approvals("vpack")
+    approvals = ApprovalsLoader().load(data, "vpack", list(range(2022, 2032)))
 
     sku = Sku(**sku_values)
 
@@ -69,11 +75,18 @@ def test_vpack_approvals_load(sku_values, asset):
 
 
 def test_prioritization_schema_is_correct():
-    assert isinstance(test_object._get_prioritization_schema(), GeneralPriorities)
+    assert isinstance(
+        PrioritiesLoader()
+        .load(data, "vpack", "General Priorities", list(range(2022, 2032)))
+        .prioritization_scheme,
+        GeneralPriorities,
+    )
 
 
 def test_priorities_load(sku_values, asset):
-    priorities = test_object._load_priorities("vpack")
+    priorities = PrioritiesLoader().load(
+        data, "vpack", "General Priorities", list(range(2022, 2032))
+    )
 
     sku = Sku(**sku_values)
 
@@ -89,6 +102,6 @@ def test_priorities_load(sku_values, asset):
 
 
 def test_run_rates_load(sku, asset):
-    run_rates = test_object._load_run_rates()
+    run_rates = RunRatesLoader().load(data)
 
     assert run_rates.get_utilization(sku, asset, 1.0) == pytest.approx(0.0035, rel=0.1)

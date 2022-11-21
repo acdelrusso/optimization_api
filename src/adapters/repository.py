@@ -6,6 +6,9 @@ class AbstractRepository(ABC):
     def add(self, table_name: str, data: dict):
         pass
 
+    def add_many(self, table_name, src, scenario_name, skus: list[dict]):
+        pass
+
     def delete(self, table_name: str, criteria: dict):
         pass
 
@@ -41,11 +44,8 @@ class PostgresRepository(AbstractRepository):
 
         placeholders = "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
         column_names = ", ".join(skus[0].keys()) + ", src, scnr_desc"
-        
-        print(skus[0])
 
         with self.conn.cursor() as cur:
-            print("inside cursor")
             args_str = ",".join(
                 cur.mogrify(
                     f"({placeholders})",
@@ -132,6 +132,12 @@ class Sqlite3Repository(AbstractRepository):
             cursor.execute(statement, values or [])
             return cursor
 
+    def _execute_many(self, statement, values):
+        with self.conn:
+            cursor = self.conn.cursor()
+            cursor.executemany(statement, values)
+            return cursor
+
     def create_table(self, table_name: str, columns: dict):
         columns_with_types = [
             f"{column_name} {data_type}" for column_name, data_type in columns.items()
@@ -141,6 +147,22 @@ class Sqlite3Repository(AbstractRepository):
             CREATE TABLE IF NOT EXISTS {table_name}
             ({', '.join(columns_with_types)});
             """
+        )
+
+    def add_many(self, table_name, src, scenario_name, skus: list[dict]):
+        iter_data = [(src, scenario_name, *sku.values()) for sku in skus]
+
+        column_names = "src, scenario_name, " + ", ".join(skus[0].keys())
+
+        print(iter_data)
+
+        self._execute_many(
+            f"""
+            INSERT INTO {table_name}
+            ({column_names})
+            VALUES (?, ? ,? ,? ,? ,? ,?, ? ,? ,?, ? ,? ,? ,? ,? ,?)
+            """,
+            iter_data,
         )
 
     def add(self, table_name, data):

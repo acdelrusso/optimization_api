@@ -9,26 +9,24 @@ from psycopg2.extras import RealDictCursor
 import src.config as config
 import uvicorn
 import multiprocessing
-import itertools
 
 app = FastAPI()
 
 
-database_source = "sqlite"
-
-
-def get_session():
-    if database_source == "aws":
-        creds = config.get_aws_creds()
-        return psycopg2.connect(
-            host=config.settings.db_endpoint,
-            port=config.settings.db_port,
-            database=config.settings.db_name,
-            user=creds["DbUser"],
-            password=creds["DbPassword"],
-            cursor_factory=RealDictCursor,
-        )
+def get_sqlite_session():
     return sqlite3.connect("./src/database/data.db")
+
+
+def get_postgres_session():
+    creds = config.get_aws_creds()
+    return psycopg2.connect(
+        host=config.settings.db_endpoint,
+        port=config.settings.db_port,
+        database=config.settings.db_name,
+        user=creds["DbUser"],
+        password=creds["DbPassword"],
+        cursor_factory=RealDictCursor,
+    )
 
 
 @app.post("/scenarios/{strategy}", response_model=list[models.Sku])
@@ -56,11 +54,11 @@ def run_scenario(
 
 
 @app.put("/scenarios/{strategy}")
-def save_last_run_scenario(
+def save_last_run_scenario_to_local_db(
     strategy: str,
     scenario_name: str,
     data: list[models.Sku],
-    session: sqlite3.Connection = Depends(get_session),
+    session: sqlite3.Connection = Depends(get_sqlite_session),
 ):
     repo = repository.Sqlite3Repository(session)
     services.save_scenario(strategy, scenario_name, data, repo)
@@ -71,21 +69,12 @@ def save_last_run_scenario(
 
 @app.put("/scenarios/aws/{strategy}")
 def save_last_run_scenario_to_aws(
-    strategy: str, scenario_name: str, data: list[models.Sku]
+    strategy: str,
+    scenario_name: str,
+    data: list[models.Sku],
+    session=Depends(get_postgres_session),
 ):
-    creds = config.get_aws_creds()
-    session = psycopg2.connect(
-        host=config.settings.db_endpoint,
-        port=config.settings.db_port,
-        database=config.settings.db_name,
-        user=creds["DbUser"],
-        password=creds["DbPassword"],
-        cursor_factory=RealDictCursor,
-    )
     repo = repository.PostgresRepository(session)
-    print(scenario_name)
-    print(type(strategy))
-    print(type(scenario_name))
     services.send_to_aws(strategy, scenario_name, data, repo)
     session.commit()
 
@@ -96,7 +85,7 @@ def save_last_run_scenario_to_aws(
 def get_scenario_data(
     strategy: str,
     scenario_name: str,
-    session: sqlite3.Connection = Depends(get_session),
+    session: sqlite3.Connection = Depends(get_sqlite_session),
 ):
     repo = repository.Sqlite3Repository(session)
     criteria = {"src": strategy, "scenario_name": scenario_name}
@@ -107,7 +96,7 @@ def get_scenario_data(
 def delete_scenario_data(
     strategy: str,
     scenario_name: str,
-    session: sqlite3.Connection = Depends(get_session),
+    session: sqlite3.Connection = Depends(get_sqlite_session),
 ):
     repo = repository.Sqlite3Repository(session)
     criteria = {"src": strategy, "scenario_name": scenario_name}
@@ -119,7 +108,7 @@ def delete_scenario_data(
 @app.get("/scenarios/{strategy}")
 def get_all_scenarios_in_db(
     strategy: str,
-    session: sqlite3.Connection = Depends(get_session),
+    session: sqlite3.Connection = Depends(get_sqlite_session),
 ):
     repo = repository.Sqlite3Repository(session)
     data = {"src": strategy}

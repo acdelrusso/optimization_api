@@ -160,7 +160,7 @@ class Sqlite3Repository(AbstractRepository):
             f"""
             INSERT INTO {table_name}
             ({column_names})
-            VALUES (?, ? ,? ,? ,? ,? ,?, ? ,? ,?, ? ,? ,? ,? ,? ,?)
+            VALUES (?, ? ,? ,? ,? ,? ,?, ? ,? ,?, ? ,? ,? ,? ,? ,?);
             """,
             iter_data,
         )

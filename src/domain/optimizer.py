@@ -35,7 +35,6 @@ class Optimizer:
         print(year, month)
         model = pe.ConcreteModel()
         skus = set(self.demand.demand_for_date(year, month))
-        SCALE = 12 if month is not None else 1
         optimization_date = (
             dt.datetime(year, month, 1) if month else dt.datetime(year, 1, 1)
         )
@@ -118,7 +117,8 @@ class Optimizer:
                 if solved_model.q_sku_asset[sku, asset].value is None:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Model did not Converge for {sku.date.year, sku.date.month}. Check your input file and take or pays.",
+                        detail=f"""Model did not Converge for {sku.date.year, sku.date.month}.
+                        Check your input file and take or pays.""",
                     )
                 if (
                     sku.product == "Gardasil 9"

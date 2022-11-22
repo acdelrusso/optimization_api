@@ -78,14 +78,20 @@ class Sku:
         return dictionary
 
     def to_aws(self):
+        if self.image == "SYRINGE-Diluent":
+            proxy = "SYR-DIL"
+        elif self.image == "VIAL-Diluent":
+            proxy = "VIAL-DIL"
+        else:
+            proxy = self.image
         base_dict = {
             "plant_id": self.allocated_to.site_code,
             "mtrl_id": self.material_number,
             "rsrc_group": self.allocated_to.asset_key,
             "frcst_yr": self.date.year,
             "prod_fmly_cd": self.product_id,
-            "image": self.image,
-            "config": self.config,
+            "image": proxy,
+            "config": "multi1x" if self.config == "multidose1x" else self.config,
             "cntry": self.country_id,
             "prdctn_qty": self.doses,
             "util": self.percent_utilization,

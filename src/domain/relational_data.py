@@ -2,7 +2,6 @@ from collections import UserDict
 from .models import Sku, Asset
 
 
-
 class RunRates(UserDict):
     def __init__(self, data):
         super().__init__(data)
@@ -16,7 +15,3 @@ class RunRates(UserDict):
             )
         except (ZeroDivisionError, KeyError):
             return 1000000
-
-
-
-

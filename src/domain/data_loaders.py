@@ -193,7 +193,7 @@ class PrioritiesLoader(DataFormatter):
             return prioritization_schema
         else:
             raise TypeError(
-                f"Invalid Prioritization Schema Defined: {self.prioritization_schema}"
+                f"Invalid Prioritization Schema Defined: {prioritization_schema}"
             )
 
     @staticmethod

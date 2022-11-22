@@ -24,11 +24,13 @@ def get_aws_creds():
         aws_access_key_id=settings.access_key_id,
         aws_secret_access_key=settings.secret_arn,
     )
-    client = session.client("redshift")
+    client = session.client("redshift", region_name=settings.db_region)
     try:
         return client.get_cluster_credentials(
             DbUser=settings.db_user,
+            DbName=settings.db_name,
             ClusterIdentifier=settings.db_cluster_identifier,
+            AutoCreate=False
         )
 
     except Exception as error:

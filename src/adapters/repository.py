@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import random
 
 
 class AbstractRepository(ABC):
@@ -41,15 +42,16 @@ class PostgresRepository(AbstractRepository):
         )
 
     def add_many(self, table_name, src, scenario_name, skus: list[dict]):
+        scenario_id = random.randint(1000000000, 9999999999)
 
-        placeholders = "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
-        column_names = ", ".join(skus[0].keys()) + ", src, scnr_desc"
+        placeholders = "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
+        column_names = ", ".join(skus[0].keys()) + ", src, scnr_desc, scnr_id"
 
         with self.conn.cursor() as cur:
             args_str = ",".join(
                 cur.mogrify(
                     f"({placeholders})",
-                    ((*sku.values(), str(src), str(scenario_name))),
+                    ((*sku.values(), str(src), str(scenario_name), str(scenario_id))),
                 ).decode("utf-8")
                 for sku in skus
             )

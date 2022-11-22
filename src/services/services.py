@@ -32,13 +32,6 @@ def send_to_aws(
 ):
     try:
         data = [sku.to_aws() for sku in skus]
-        for point in data:
-            if (
-                len(point["image"]) > 10
-                or len(point["config"]) > 10
-                or len(point["cntry"]) > 10
-            ):
-                print(point)
         repo.add_many("sam_py_model.vfn_vpac_cap_vol", strategy, scenario_name, data)
     except Exception as error:
         raise HTTPException(
